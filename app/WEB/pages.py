@@ -1,3 +1,4 @@
+from re import S
 from fastapi import Request, Form
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -6,7 +7,7 @@ from app.models import SessionDep, get_user, get_user_by_id, register_user, upda
 from app.core.config import templates, AUTH_QRCODE_ROOT_DIR
 from app.models.users import User
 
-from . import webApp, get_2FA_uri, verify2FAcode
+from . import webApp, get_2FA_uri, verify2FAcode, login_required, get_current_user
 from .forms import loginForm, registerForm, twoFactorAuthForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
@@ -66,7 +67,7 @@ async def login(req: Request, data: Annotated[loginForm, Form()], session: Sessi
             }
         )
 
-    req.session[data.email] = user.uid
+    req.session[user.uid] = data.email
     return RedirectResponse("/web/test", status_code=HTTP_302_FOUND)
 
 # Register Route
@@ -122,7 +123,7 @@ def verify2FA(req: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()]
     user = get_user_by_id(uid, session)
     if user is not None:
         if verify2FAcode(uid, code, session):
-            req.session[user.email] = user.uid
+            req.session[user.uid] = user.email
             return JSONResponse({
                 'success': True,
                 'message': '2FA enabled successfully',
@@ -132,3 +133,11 @@ def verify2FA(req: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()]
             'success': False,
             'message': 'Invalid verification code',
         }, status_code=HTTP_400_BAD_REQUEST)
+
+
+# Logout Route
+@webApp.get("/logout/")
+@login_required()
+async def logout(req: Request, session: SessionDep, current_user_uid: str = None):
+    req.session.pop(current_user_uid)
+    return RedirectResponse("/web/home", status_code=HTTP_302_FOUND)
