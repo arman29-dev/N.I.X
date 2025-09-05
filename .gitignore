@@ -206,5 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Database
+# N.I.X
 /Database
+/static/auth-QRs

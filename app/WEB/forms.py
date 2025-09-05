@@ -1,13 +1,18 @@
 from pydantic import BaseModel
 
 
-class loginFormModel(BaseModel):
+class loginForm(BaseModel):
     email: str
     password: str
+    twoFA: int
 
 
-class registerFormModel(BaseModel):
+class registerForm(BaseModel):
     email: str
     username: str
     password: str
     cnfmPassword: str
+
+
+class twoFactorAuthForm(BaseModel):
+    verification_code: str

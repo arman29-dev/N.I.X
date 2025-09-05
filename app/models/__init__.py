@@ -1,5 +1,5 @@
 from fastapi import Depends
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, select, create_engine
 
 from typing import Annotated
 
@@ -31,3 +31,21 @@ def register_user(user: User, session: SessionDep) -> tuple[int, str]:
 def get_user(email: str, session: SessionDep) -> User|None:
     user = session.get(User, {"email": email})
     return user
+
+
+def get_user_by_id(uid: str, session: SessionDep) -> User|None:
+    statement = select(User).where(User.uid == uid)
+    user = session.exec(statement).first()
+    return user
+
+
+def update_user(user: User, session: SessionDep):
+    try:
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return 200, "Successfully Updated"
+
+    except Exception as E:
+        session.rollback()
+        return 500, str(E)
