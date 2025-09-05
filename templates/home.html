@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+        <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+        <link href="{{ url_for('static', path='css/home.css') }}" rel="stylesheet">
+
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+        <title>Login/Register</title>
+    </head>
+    <body class="bg-[var(--bg-color)] text-[var(--text-color)]">
+        <div class="flex min-h-screen">
+            <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-12 bg-[#1a3838] relative overflow-hidden">
+                <div class="absolute inset-0 bg-black/50 z-10"></div>
+                <div class="absolute top-0 left-0 w-full h-full animate-pulse">
+                    <div class="absolute top-1/4 left-1/4 w-32 h-32 bg-[var(--primary-color)]/20 rounded-full blur-2xl"></div>
+                    <div class="absolute bottom-1/4 right-1/4 w-48 h-48 bg-[var(--primary-color)]/30 rounded-full blur-3xl"></div>
+                    <div class="absolute top-10 right-20 w-24 h-24 bg-white/20 rounded-lg -rotate-12 blur-xl" ></div>
+                    <div class="absolute bottom-10 left-20 w-24 h-24 bg-white/20 rounded-lg rotate-12 blur-xl" ></div>
+                </div>
+                <div class="relative z-20 text-center">
+                    <img alt="Application Screenshot" class="rounded-lg shadow-2xl transform hover:scale-105 transition-transform duration-500 ease-in-out -rotate-3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr1K7pu93v2E7r7wqf5Jfu5F-PGZfptYKIAEOBqQ-7QWu_2h1q6GPwaulpSDdSnEboY2cdBIZCpnFJYIhCoHwG72VVY0lZxdGWuMqTmLvxQktSCewHdaJzYe_IJA-O2XS8Iv0IW_M_RNCSeiqBfOA_6MuR7n6T4uLmN0nH1j7p70s_R0Pins0IXwUWh4LdbE8ey1j4GTwciLFCD_cydXePVtmNYojckXGQzkMUsAkkgkTc2A7SveZ8YjC8eUnZ_tCobB2Lmi3rVSUi" />
+                    <div class="mt-8 p-6 bg-black/30 backdrop-blur-sm rounded-lg" >
+                        <h1 class="text-4xl font-bold mb-4 text-white">
+                            Your Social Dashboard
+                        </h1>
+                        <p class="text-lg text-gray-300">
+                            Connect, share, and discover. All in one place.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12" >
+                <div class="w-full max-w-md perspective-[1000px]">
+                    <div class="form-container" id="form-container">
+                        <div class="form-flipper h-[550px]">
+                            <div class="form-front">
+                                <div class="bg-[#1a3838] p-8 rounded-lg shadow-2xl" >
+                                    <h2 class="text-3xl font-bold mb-6 text-center" >
+                                        Welcome Back
+                                    </h2>
+                                    <form method="post" id="login-form" action="/web/login/">
+                                        <div class="space-y-6">
+                                            <input class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
+                                                placeholder="Email" required="" type="email" name="email"
+                                            />
+                                            <div class="relative">
+                                                <input class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all pr-12"
+                                                    id="login-password" placeholder="Password" required="" type="password" name="password"
+                                                />
+                                                <button
+                                                    class="absolute inset-y-0 right-0 flex items-center px-4 text-[var(--placeholder-color)] hover:text-[var(--primary-color)] transition-colors"
+                                                    onclick="togglePasswordVisibility('login-password', this)" type="button">
+                                                    <span class="material-symbols-outlined">visibility_off</span>
+                                                </button>
+                                            </div>
+                                            <!--<input
+                                                class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
+                                                placeholder="2FA-OTP" type="number" name="twoFA"
+                                            />-->
+                                        </div>
+                                        <div class="mt-8">
+                                            <button
+                                                class="w-full bg-[var(--primary-color)] text-[#102323] font-bold py-3 rounded-md hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105"
+                                                type="submit">Login</button>
+                                        </div>
+                                        <div class="mt-4">
+                                            <button
+                                                class="w-full border-2 border-[var(--primary-color)] text-[var(--primary-color)] font-bold py-3 rounded-md transition-all duration-300 passkey-btn"
+                                                type="button">Login with Passkey</button>
+                                        </div>
+                                        <div class="mt-6 text-center text-[var(--placeholder-color)] text-sm">
+                                            <a class="text-red-300 hover:text-red-400 transition" href="#">Forgot Password?</a>
+                                            <span class="mx-2">|</span>
+                                            <a class="hover:text-[var(--primary-color)] transition" href="#" id="show-register">Create a New Account</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="form-back">
+                                <div class="bg-[#1a3838] p-8 rounded-lg shadow-2xl" >
+                                    <h2 class="text-3xl font-bold mb-6 text-center" >
+                                        Create Account
+                                    </h2>
+                                    <form method="post" id="register-form" action="/web/register/" onsubmit="validatePassword()">
+                                        <div class="space-y-6">
+                                            <input
+                                                class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
+                                                placeholder="Email" required="" type="email" name="email"
+                                            />
+                                            <input
+                                                class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
+                                                placeholder="Username" required="" type="text" name="username"
+                                            />
+                                            <div class="relative">
+                                                <input
+                                                    class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all pr-12"
+                                                    id="register-password" placeholder="Password" required="" type="password" name="password"
+                                                />
+                                                <button
+                                                    class="absolute inset-y-0 right-0 flex items-center px-4 text-[var(--placeholder-color)] hover:text-[var(--primary-color)] transition-colors"
+                                                    onclick="togglePasswordVisibility('register-password', this)" type="button">
+                                                    <span class="material-symbols-outlined">visibility_off</span>
+                                                </button>
+                                            </div>
+                                            <div class="relative">
+                                                <input
+                                                    class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all pr-12"
+                                                    id="confirm-password" placeholder="Confirm Password" required="" type="password" name="cnfmPassword"
+                                                />
+                                                <button
+                                                    class="absolute inset-y-0 right-0 flex items-center px-4 text-[var(--placeholder-color)] hover:text-[var(--primary-color)] transition-colors"
+                                                    onclick="togglePasswordVisibility('confirm-password', this)" type="button">
+                                                    <span class="material-symbols-outlined">visibility_off</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <span id="error" class="error-message">{{ error }}</span>
+                                        <div class="mt-8">
+                                            <button
+                                                class="w-full bg-[var(--primary-color)] text-[#102323] font-bold py-3 rounded-md hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105"
+                                                type="submit">Register</button>
+                                        </div>
+                                        <div class="mt-6 text-center text-[var(--placeholder-color)] text-sm" >
+                                            <a class="hover:text-[var(--primary-color)] transition" href="#" id="show-login" >Already have an account? Login</a >
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="{{ url_for('static', path='js/home.js') }}"></script>
+    </body>
+</html>
