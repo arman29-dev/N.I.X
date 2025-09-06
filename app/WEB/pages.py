@@ -7,7 +7,7 @@ from app.models import SessionDep, get_user, get_user_by_id, register_user, upda
 from app.core.config import templates, AUTH_QRCODE_ROOT_DIR
 from app.models.users import User
 
-from . import webApp, get_2FA_uri, verify2FAcode, login_required, get_current_user
+from . import webApp, get_2FA_uri, verify2FAcode, login_required
 from .forms import loginForm, registerForm, twoFactorAuthForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password

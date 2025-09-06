@@ -12,10 +12,7 @@ from pyotp import TOTP
 
 webApp = APIRouter(
     prefix="/web",
-    tags=[
-        "Web", "WebApp",
-        "N.I.X-Dashboard"
-    ],
+    tags=["WebApp"],
 )
 
 
