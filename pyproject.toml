@@ -20,3 +20,8 @@ dependencies = [
     "starlette-session>=0.4.3",
     "uvicorn>=0.35.0",
 ]
+
+[dependency-groups]
+dev = [
+    "fastapi[standard]>=0.116.1",
+]
