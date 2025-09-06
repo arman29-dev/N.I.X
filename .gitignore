@@ -209,3 +209,5 @@ __marimo__/
 # N.I.X
 /Database
 /static/auth-QRs
+/static/css/test.css
+/templates/test.html
