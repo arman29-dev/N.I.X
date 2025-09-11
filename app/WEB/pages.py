@@ -1,10 +1,10 @@
-from re import S
 from fastapi import Request, Form
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 from app.core.config import templates, AUTH_QRCODE_ROOT_DIR
+from app.core.emailing import send_email
 from app.models.users import User
 
 from . import webApp, get_2FA_uri, verify2FAcode, login_required
@@ -124,10 +124,21 @@ def verify2FA(req: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()]
     if user is not None:
         if verify2FAcode(uid, code, session):
             req.session[user.uid] = user.email
+
+            email_template = templates.get_template("email/welcome.html")
+            status, msg = send_email(
+                to=user.email,
+                subject="Welcome to N.I.X",
+                body=email_template.render(user=user)
+            )
+            if status is not True:
+                print(f"Email Sent Status: {status}->{msg}")
+
             return JSONResponse({
                 'success': True,
                 'message': '2FA enabled successfully',
             })
+
 
         return JSONResponse({
             'success': False,
