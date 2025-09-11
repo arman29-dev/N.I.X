@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function validatePassword(){
-  var password = document.getElementById("password").value;
+  var password = document.getElementById("register-password").value;
   var confirmPassword = document.getElementById("confirm-password").value;
   var error = document.getElementById("error");
 
