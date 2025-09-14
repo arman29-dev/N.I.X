@@ -83,7 +83,7 @@ async def register(req: Request, data: Annotated[registerForm, Form()], session:
 
     status, msg = register_user(user, session)
     if status == 200:
-        return RedirectResponse(f"/web/setup-2FA/{user.uid}", status_code=HTTP_302_FOUND)
+        return RedirectResponse(req.url_for('setup-2FA', uid=user.uid), status_code=HTTP_302_FOUND)
 
     elif status == 500:
         return templates.TemplateResponse(
@@ -155,7 +155,7 @@ async def forgot_password(req: Request):
     )
 
 @webApp.post("/forgot-password")
-async def send_reset_code(email: Annotated[str, Form()], session: SessionDep):
+async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
     user = get_user(email, session)
     if user is None:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Email not registered")
@@ -191,7 +191,7 @@ async def send_reset_code(email: Annotated[str, Form()], session: SessionDep):
 async def password_reset_form(req: Request, uid: str, code: Union[str, None], session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is None:
-        return RedirectResponse("/web/forgot-password", status_code=HTTP_302_FOUND)
+        return RedirectResponse(req.url_for('forgot_password'), status_code=HTTP_302_FOUND)
 
     return templates.TemplateResponse(
         "password-reset.html",
@@ -241,7 +241,7 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
 @login_required()
 async def logout(req: Request, session: SessionDep, current_user_uid: str|None=None):
     req.session.pop(str(current_user_uid))
-    return RedirectResponse("/web/home", status_code=HTTP_302_FOUND)
+    return RedirectResponse(req.url_for('home'), status_code=HTTP_302_FOUND)
 
 
 # Dashboard Route
