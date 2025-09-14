@@ -16,3 +16,10 @@ class registerForm(BaseModel):
 
 class twoFactorAuthForm(BaseModel):
     verification_code: str
+
+
+class passwordResetForm(BaseModel):
+    new_pswd: str
+    cnfm_pswd: str
+    verification_code: int
+    verification_code_hash: str

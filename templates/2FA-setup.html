@@ -56,7 +56,7 @@
 
     <script>
         const API_DATA = {
-            "success_url": "http://localhost:8000/web/test",
+            "success_url": "{{ url_for('dashboard', uid=user.uid) }}",
             "apiUrl": "{{ url_for('setup_2FA', uid=user.uid) }}",
         }
     </script>
