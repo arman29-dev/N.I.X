@@ -207,6 +207,7 @@ marimo/_lsp/
 __marimo__/
 
 # N.I.X
+/Docs
 /Database
 /static/auth-QRs
 /static/css/test.css
