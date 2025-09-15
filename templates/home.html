@@ -9,10 +9,11 @@
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
         <link href="{{ url_for('static', path='css/home.css') }}" rel="stylesheet">
+        <link rel="icon" type="image/png" href="{{ url_for('static', path='images/favicon.ico') }}">
 
         <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-        <title>Login/Register</title>
+        <title>N.I.X-Login/Register</title>
     </head>
     <body class="bg-[var(--bg-color)] text-[var(--text-color)]">
         <div class="flex min-h-screen">
@@ -25,13 +26,14 @@
                     <div class="absolute bottom-10 left-20 w-24 h-24 bg-white/20 rounded-lg rotate-12 blur-xl" ></div>
                 </div>
                 <div class="relative z-20 text-center">
-                    <img alt="Application Screenshot" class="rounded-lg shadow-2xl transform hover:scale-105 transition-transform duration-500 ease-in-out -rotate-3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr1K7pu93v2E7r7wqf5Jfu5F-PGZfptYKIAEOBqQ-7QWu_2h1q6GPwaulpSDdSnEboY2cdBIZCpnFJYIhCoHwG72VVY0lZxdGWuMqTmLvxQktSCewHdaJzYe_IJA-O2XS8Iv0IW_M_RNCSeiqBfOA_6MuR7n6T4uLmN0nH1j7p70s_R0Pins0IXwUWh4LdbE8ey1j4GTwciLFCD_cydXePVtmNYojckXGQzkMUsAkkgkTc2A7SveZ8YjC8eUnZ_tCobB2Lmi3rVSUi" />
+                    <img class="rounded-lg shadow-2xl transform hover:scale-95 transition-transform duration-500 ease-in-out -rotate-3"
+                        style="max-height: 450px; max-width: 450px;" src="{{ url_for('static', path='images/homeUI.png') }}" alt="Application Logo" />
                     <div class="mt-8 p-6 bg-black/30 backdrop-blur-sm rounded-lg" >
                         <h1 class="text-4xl font-bold mb-4 text-white">
-                            Your Social Dashboard
+                            Your N.I.X Agent Dashboard
                         </h1>
                         <p class="text-lg text-gray-300">
-                            Connect, share, and discover. All in one place.
+                            Connect, Control, & Coandmmunicate. All in one place.
                         </p>
                     </div>
                 </div>
