@@ -6,7 +6,7 @@ class User(SQLModel, table=True):
     uid: str = Field(default="xxxxx-xxx-xxx-xxxxx", unique=True)
     email: str = Field(primary_key=True)
     username: str
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
     verification_code: str|None = Field(default='000000', max_length=6, nullable=True)
     code_expires_at: datetime|None = Field(default=datetime.now(), nullable=True)

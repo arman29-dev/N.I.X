@@ -2,11 +2,12 @@ from fastapi import Depends
 from sqlmodel import Session, select, create_engine
 
 from typing import Annotated
+from logging import getLogger
 
 from .users import User
 
 
-
+logger = getLogger(__name__)
 engine = create_engine("sqlite:///Database/database.db")
 
 def get_session():
@@ -29,14 +30,24 @@ def register_user(user: User, session: SessionDep) -> tuple[int, str]:
 
 
 def get_user(email: str, session: SessionDep) -> User|None:
-    user = session.get(User, {"email": email})
-    return user
+    try:
+        user = session.get(User, {"email": email})
+        return user
+
+    except Exception as E:
+        logger.error(f"Database error while fetching user {email}: {E}", exc_info=True)
+        raise
 
 
 def get_user_by_id(uid: str, session: SessionDep) -> User|None:
-    statement = select(User).where(User.uid == uid)
-    user = session.exec(statement).first()
-    return user
+    try:
+        statement = select(User).where(User.uid == uid)
+        user = session.exec(statement).first()
+        return user
+
+    except Exception as E:
+        logger.error(f"Database error while fetching user by ID {uid}: {E}", exc_info=True)
+        raise
 
 
 def update_user(user: User, session: SessionDep):
@@ -48,4 +59,5 @@ def update_user(user: User, session: SessionDep):
 
     except Exception as E:
         session.rollback()
+        logger.error(f"Database error while updating user {user.email}: {E}", exc_info=True)
         return 500, str(E)

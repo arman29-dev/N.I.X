@@ -3,7 +3,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
-from app.core.config import templates, AUTH_QRCODE_ROOT_DIR
+from app.core.config import templates, limiter, AUTH_QRCODE_ROOT_DIR
+from app.core.sLogger import security_logger
 from app.core.emailing import send_email
 from app.models.users import User
 
@@ -13,10 +14,15 @@ from .forms import loginForm, registerForm, twoFactorAuthForm, passwordResetForm
 from passlib.hash import pbkdf2_sha256 as secure_password
 from typing import Annotated, Union
 from pyotp import random_base32
+from datetime import datetime
+from logging import getLogger
 from os.path import join
 from qrcode import make
 from uuid import uuid4
 
+
+
+logger = getLogger(__name__)
 
 
 # Root Route
@@ -38,41 +44,56 @@ async def home(req: Request):
 
 # Login Route
 @webApp.post("/login/")
-async def login(req: Request, data: Annotated[loginForm, Form()], session: SessionDep):
+@limiter.limit("5/minute")
+async def login(request: Request, data: Annotated[loginForm, Form()], session: SessionDep):
+    client_ip = request.client.host if request.client else 'unknown'
+
+    security_logger.info(f"Login attempt for email: {data.email} from IP: {client_ip}")
+
     user = get_user(data.email, session)
     if user is None:
+        security_logger.warning(f"Failed login attempt - user not found: {data.email} from IP: {client_ip}")
+
         return templates.TemplateResponse(
             "home.html",
             {
-                "request": req,
+                "request": request,
                 "error": "Invalid email"
             }
         )
 
     if not secure_password.verify(data.password, user.password):
+        security_logger.warning(f"Failed login attempt - incorrect password for: {data.email} from IP: {client_ip}")
+
         return templates.TemplateResponse(
             "home.html",
             {
-                "request": req,
+                "request": request,
                 "error": "Invalid email or password"
             }
         )
 
     if verify2FAcode(user.uid, str(data.twoFA), session) is not True:
+        security_logger.warning(f"Failed login attempt - invalid 2FA code for: {data.email} from IP: {client_ip}")
+
         return templates.TemplateResponse(
             "home.html",
             {
-                "request": req,
+                "request": request,
                 "error": "Invalid 2FA code"
             }
         )
 
-    req.session[user.uid] = data.email
-    return RedirectResponse(req.url_for('dashboard', uid=user.uid), status_code=HTTP_302_FOUND)
+    security_logger.info(f"Successful login for: {data.email} from IP: {client_ip}")
+
+    request.session[user.uid] = data.email
+    return RedirectResponse(request.url_for('dashboard', uid=user.uid), status_code=HTTP_302_FOUND)
 
 # Register Route
 @webApp.post("/register/")
 async def register(req: Request, data: Annotated[registerForm, Form()], session: SessionDep):
+    client_ip = req.client.host if req.client else 'unknown'
+
     user = User(
         uid=str(uuid4()),
         email=data.email,
@@ -83,9 +104,14 @@ async def register(req: Request, data: Annotated[registerForm, Form()], session:
 
     status, msg = register_user(user, session)
     if status == 200:
+        security_logger.info(f"New user registered: {data.email} from IP: {client_ip}")
         return RedirectResponse(req.url_for('setup-2FA', uid=user.uid), status_code=HTTP_302_FOUND)
 
     elif status == 500:
+        security_logger.error(f"Registration failed for {data.email}: {msg}",
+            exc_info=True, extra={'client_ip': client_ip}
+        )
+
         return templates.TemplateResponse(
             "home.html",
             {
@@ -104,7 +130,7 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
         twoFA_qr_img = make(str(qr_uri))
 
         qr_path = join(AUTH_QRCODE_ROOT_DIR, f'{user.uid}.png')
-        twoFA_qr_img.save(qr_path)
+        twoFA_qr_img.save(qr_path) # type: ignore
 
         user.qr_code_path = qr_path
         update_user(user, session)
@@ -118,12 +144,13 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
         )
 
 @webApp.post('/setup-2FA/{uid}')
-def verify2FA(req: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()], session: SessionDep):
+@limiter.limit("3/minute")
+def verify2FA(request: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()], session: SessionDep):
     code = data.verification_code
     user = get_user_by_id(uid, session)
     if user is not None:
         if verify2FAcode(uid, code, session):
-            req.session[user.uid] = user.email
+            request.session[user.uid] = user.email
 
             email_template = templates.get_template("email/welcome.html")
             status, msg = send_email(
@@ -208,8 +235,11 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
     if user is None:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid user")
 
-    # Verify the verification code against the stored code
-    if not secure_password.verify(str(data.verification_code), str(data.verification_code_hash)):
+    verification_code_stats = secure_password.verify(str(data.verification_code), str(data.verification_code_hash))
+    if user.code_expires_at is None:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
+
+    if not (verification_code_stats and user.code_expires_at < datetime.now()):
         if not verify2FAcode(uid, str(data.verification_code), session):
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid verification code")
 
@@ -240,6 +270,9 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
 @webApp.get("/logout/")
 @login_required()
 async def logout(req: Request, session: SessionDep, current_user_uid: str|None=None):
+    client_ip = req.client.host if req.client else 'unknown'
+    security_logger.info(f"User logged out: {current_user_uid} from IP: {client_ip}")
+
     req.session.pop(str(current_user_uid))
     return RedirectResponse(req.url_for('home'), status_code=HTTP_302_FOUND)
 
