@@ -43,7 +43,7 @@ async def home(req: Request):
     )
 
 # Login Route
-@webApp.post("/login/")
+@webApp.post("/auth/login/")
 @limiter.limit("5/minute")
 async def login(request: Request, data: Annotated[loginForm, Form()], session: SessionDep):
     client_ip = request.client.host if request.client else 'unknown'
@@ -90,7 +90,7 @@ async def login(request: Request, data: Annotated[loginForm, Form()], session: S
     return RedirectResponse(request.url_for('dashboard', uid=user.uid), status_code=HTTP_302_FOUND)
 
 # Register Route
-@webApp.post("/register/")
+@webApp.post("/auth/register/")
 async def register(req: Request, data: Annotated[registerForm, Form()], session: SessionDep):
     client_ip = req.client.host if req.client else 'unknown'
 
@@ -122,7 +122,7 @@ async def register(req: Request, data: Annotated[registerForm, Form()], session:
 
 
 # 2FA Setup Route
-@webApp.get('/setup-2FA/{uid}', response_class=HTMLResponse)
+@webApp.get('/auth/setup-2FA/{uid}', response_class=HTMLResponse)
 async def setup_2FA(req: Request, uid: str, session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is not None:
@@ -143,7 +143,7 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
             }
         )
 
-@webApp.post('/setup-2FA/{uid}')
+@webApp.post('/auth/setup-2FA/{uid}')
 @limiter.limit("3/minute")
 def verify2FA(request: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()], session: SessionDep):
     code = data.verification_code
@@ -174,14 +174,14 @@ def verify2FA(request: Request, uid: str, data: Annotated[twoFactorAuthForm, For
 
 
 # Forgot Password Route
-@webApp.get("/forgot-password", response_class=HTMLResponse)
+@webApp.get("/account/security/forgot-password", response_class=HTMLResponse)
 async def forgot_password(req: Request):
     return templates.TemplateResponse(
         "forgot-password.html",
         {"request": req}
     )
 
-@webApp.post("/forgot-password")
+@webApp.post("/account/security/forgot-password")
 async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
     user = get_user(email, session)
     if user is None:
@@ -210,11 +210,14 @@ async def send_reset_code(req: Request, email: Annotated[str, Form()], session: 
             }
         )
 
-    return RedirectResponse(f"/web/password-reset/{user.uid}?code={secure_password.hash(code)}", status_code=HTTP_302_FOUND)
+    return RedirectResponse(
+        f"/web/account/security/password-reset/{user.uid}?code={secure_password.hash(code)}",
+        status_code=HTTP_302_FOUND
+    )
 
 
 # Password Reset Route
-@webApp.get("/password-reset/{uid}", response_class=HTMLResponse)
+@webApp.get("/account/security/password-reset/{uid}", response_class=HTMLResponse)
 async def password_reset_form(req: Request, uid: str, code: Union[str, None], session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is None:
@@ -229,7 +232,7 @@ async def password_reset_form(req: Request, uid: str, code: Union[str, None], se
         }
     )
 
-@webApp.post("/password-reset/{uid}")
+@webApp.post("/account/security/password-reset/{uid}")
 async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is None:
@@ -267,7 +270,7 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
 
 
 # Logout Route
-@webApp.get("/logout/")
+@webApp.get("/account/logout/")
 @login_required()
 async def logout(req: Request, session: SessionDep, current_user_uid: str|None=None):
     client_ip = req.client.host if req.client else 'unknown'
