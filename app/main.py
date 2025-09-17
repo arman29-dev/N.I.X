@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from slowapi.errors import RateLimitExceeded
 
@@ -38,11 +37,9 @@ SQLModel.metadata.create_all(engine)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-# Initialize middlewares
-app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["yourdomain.com"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"])
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):

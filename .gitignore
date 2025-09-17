@@ -208,6 +208,7 @@ __marimo__/
 
 # N.I.X
 /Docs
+/logs
 /Database
 /static/auth-QRs
 /static/css/test.css

@@ -105,7 +105,7 @@ async def register(req: Request, data: Annotated[registerForm, Form()], session:
     status, msg = register_user(user, session)
     if status == 200:
         security_logger.info(f"New user registered: {data.email} from IP: {client_ip}")
-        return RedirectResponse(req.url_for('setup-2FA', uid=user.uid), status_code=HTTP_302_FOUND)
+        return RedirectResponse(req.url_for('setup_2FA', uid=user.uid), status_code=HTTP_302_FOUND)
 
     elif status == 500:
         security_logger.error(f"Registration failed for {data.email}: {msg}",
@@ -210,10 +210,8 @@ async def send_reset_code(req: Request, email: Annotated[str, Form()], session: 
             }
         )
 
-    return RedirectResponse(
-        f"/web/account/security/password-reset/{user.uid}?code={secure_password.hash(code)}",
-        status_code=HTTP_302_FOUND
-    )
+    pswd_rst_url = req.url_for('password_reset_form', uid=user.uid).include_query_params(code=secure_password.hash(code))
+    return RedirectResponse(pswd_rst_url, status_code=HTTP_302_FOUND)
 
 
 # Password Reset Route
@@ -242,7 +240,12 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
     if user.code_expires_at is None:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
 
-    if not (verification_code_stats and user.code_expires_at < datetime.now()):
+    # Check if code is expired
+    if user.code_expires_at < datetime.now():
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Verification code has expired. Please request a new one.")
+
+    # Verify the code
+    if not verification_code_stats:
         if not verify2FAcode(uid, str(data.verification_code), session):
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid verification code")
 
@@ -263,7 +266,7 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
         subject="N.I.X Password Update Confirmation",
         body=pswd_update_confirm_email_template.render()
     )
-    if stats is False:
+    if email_stats is False:
         print(f"Email Sent Status: {stats}->{msg}")
 
     return stats
