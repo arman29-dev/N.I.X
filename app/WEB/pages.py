@@ -2,11 +2,13 @@ from fastapi import Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 from app.core.config import templates, limiter, AUTH_QRCODE_ROOT_DIR
 from app.core.sLogger import security_logger
 from app.core.emailing import send_email
+
 from app.models.users import User
+from app.models import get_all_devices
+from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 
 from . import webApp, get_2FA_uri, verify2FAcode, login_required, generate_verification_code
 from .forms import loginForm, registerForm, twoFactorAuthForm, passwordResetForm
@@ -287,7 +289,14 @@ async def logout(req: Request, session: SessionDep, current_user_uid: str|None=N
 @webApp.get("/dashboard/{uid}", response_class=HTMLResponse)
 @login_required()
 async def dashboard(req: Request, uid: str, session: SessionDep, current_user_uid: str|None=None):
-    return JSONResponse({
-        "success": True,
-        "message": f"Welcome to your dashboard, {uid}!"
-    }, status_code=HTTP_302_FOUND)
+    devices = get_all_devices(owner_uid=uid, session=session)
+    user = get_user_by_id(uid, session)
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": req,
+            "devices": devices,
+            "user": user,
+        }
+    )

@@ -1,0 +1,137 @@
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(5, 205, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(5, 205, 255, 0);
+  }
+}
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes modal-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+}
+.group:hover .animate-pulse-on-hover {
+  animation: pulse 1.5s infinite;
+}
+.group .tooltip {
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s;
+}
+.group:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+.group .device-menu {
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.2s ease-out;
+}
+.group:focus-within .device-menu {
+    visibility: visible;
+    opacity: 1;
+    transform: scale(1);
+}
+.menu-item {
+    position: relative;
+}
+.menu-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 0.125rem; /* h-0.5 */
+    width: 0;
+    background-color: currentColor;
+    transition: all 0.3s ease-out;
+}
+.menu-item:hover::after {
+    width: 100%;
+}
+#add-device-modal {
+    display: none;
+}
+#add-device-modal.flex {
+    animation: modal-in 0.3s ease-out forwards;
+}
+#add-device-modal.modal-closing {
+    animation: modal-out 0.3s ease-in forwards;
+}
+.btn-add-device:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 15px rgba(61, 245, 245, 0.5);
+}
+
+/* Styles for the new modal */
+:root {
+  --primary-color: #3df5f5;
+  --background-color: #0f172a;
+  --card-color: #1e293b;
+  --text-color: #f8fafc;
+  --muted-text-color: #94a3b8;
+  --border-color: #334155;
+}
+.device-option-label {
+  transition: all 0.2s ease-in-out;
+}
+.device-option-label:hover {
+  background-color: #334155;
+  border-color: var(--primary-color);
+}
+.device-option-label.selected {
+    border-width: 2px;
+    border-color: var(--primary-color);
+    background-color: #334155; /* slate-700 equivalent */
+    color: var(--primary-color);
+}
+.device-option-label.selected .material-symbols-outlined {
+    color: var(--primary-color);
+}
+
+/* Animation for the modal's add device button */
+.btn-add-device-modal {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out;
+}
+.btn-add-device-modal:active {
+  transform: scale(0.95);
+}
+.btn-add-device-modal::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform .5s, opacity 1s;
+}
+.btn-add-device-modal:active::after {
+  transform: scale(0, 0);
+  opacity: .2;
+  transition: 0s;
+}

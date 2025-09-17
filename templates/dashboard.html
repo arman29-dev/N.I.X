@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+        <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+        <link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght@400;500;700;900&amp;family=Space+Grotesk%3Awght@400;500;700" onload="this.rel='stylesheet'" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+        <link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+
+        <link href="{{ url_for('static', path='css/dashboard.css') }}" rel="stylesheet">
+        <link rel="icon" type="image/png" href="{{ url_for('static', path='images/favicon.ico') }}">
+
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+        <title>N.I.X-Dashboard</title>
+    </head>
+    <body class="bg-[#101E1E] text-white" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <div class="relative flex size-full min-h-screen flex-col dark group/design-root overflow-x-hidden">
+            <div class="layout-container flex h-full grow flex-col">
+                <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#2A3C3C] px-10 py-4">
+                    <div class="flex items-center gap-3 text-white">
+                        <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            <path d="M2 7L12 12L22 7" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            <path d="M12 22V12" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                        </svg>
+                        <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-[#3df5f5]">N.I.X</h2>
+                    </div>
+                    <div class="group relative">
+                        <button class="relative flex size-10 items-center justify-center rounded-full border-2 border-transparent transition-all duration-300 hover:border-[#05cdff]">
+                            <div class="absolute inset-0 rounded-full animate-pulse-on-hover"></div>
+                            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            </svg>
+                        </button>
+                        <div class="tooltip absolute right-0 top-full mt-2 w-48 rounded-md bg-[#182C2C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 transition-opacity duration-300 ease-in-out">
+                            <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="#">Account</a>
+                            <a class="block px-4 py-2 text-sm text-red-400 transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('logout') }}">Logout</a>
+                        </div>
+                    </div>
+                </header>
+                <div class="px-4 py-10 sm:px-6 lg:px-8">
+                    <div class="mx-auto max-w-5xl">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                            <h1 class="text-3xl font-bold leading-tight tracking-tight">
+                                Connected Devices
+                            </h1>
+                            <button class="btn-add-device flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-5 bg-[#3df5f5] text-[#102323] text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-opacity-80 transition-all duration-200" id="add-device-btn">
+                                <span class="material-symbols-outlined"> add </span>
+                                <span class="truncate">Add New Device</span>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {% if devices %}
+                            {% for device in devices %}
+                            <div class="flex flex-col rounded-lg bg-[#182C2C] p-6 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/20">
+                                <div class="group relative flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-[#3df5f5]">
+                                            {% if device.type == "embedded" %}
+                                            memory
+                                            {% else %}
+                                            {{ device.type }}
+                                            {% endif %}
+                                        </span>
+                                        <p class="text-lg font-bold">{{ device.name }}</p>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-white focus:outline-none rounded-full p-1">
+                                        <span class="material-symbols-outlined"> more_vert </span>
+                                    </button>
+                                    <div class="device-menu origin-top-right absolute right-0 top-full mt-2 w-40 rounded-md bg-[#2A3C3C] p-2 shadow-lg ring-1 ring-black ring-opacity-5">
+                                        <a class="menu-item block px-4 py-2 text-sm text-green-300 hover:bg-green-800/20 rounded-md" href="#">Refresh</a>
+                                        <a class="menu-item block px-4 py-2 text-sm text-yellow-300 hover:bg-yellow-800/20 rounded-md" href="#">Unlink</a>
+                                        <a class="menu-item block px-4 py-2 text-sm text-red-400 hover:bg-red-800/20 rounded-md" href="#">Delete</a>
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex-1">
+                                    <p class="text-sm text-gray-400">{{ device.type }}</p>
+                                </div>
+                                <div class="mt-4 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        {% if device.is_active %}
+                                        <div class="size-2.5 rounded-full bg-green-500"></div>
+                                        <p class="text-sm font-medium text-green-400">Online</p>
+                                        {% else %}
+                                        <div class="size-2.5 rounded-full bg-red-500"></div>
+                                        <p class="text-sm font-medium text-red-400">Offline</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-gray-400">No devices connected. Click "Add New Device" to get started.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" id="device-modal">
+                        <div class="bg-[var(--card-color)] rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0" id="modal-content">
+                            <div class="p-8">
+                                <div class="flex justify-between items-start mb-6">
+                                    <h2 class="text-[var(--text-color)] text-2xl font-bold">Add New Device</h2>
+                                    <button class="text-[var(--muted-text-color)] hover:text-[var(--text-color)] transition-colors" id="close-modal-btn">
+                                        <span class="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <p class="text-[var(--muted-text-color)] mb-8">Select the type of device you would like to add.</p>
+                                <div class="space-y-4">
+                                    <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="mobile">
+                                        <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">phone_iphone</span>
+                                        <span class="font-medium">Mobile</span>
+                                        <input class="invisible absolute" id="mobile" name="device-type" type="radio"/>
+                                    </label>
+                                    <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="desktop">
+                                        <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">desktop_windows</span>
+                                        <span class="font-medium">Desktop</span>
+                                        <input class="invisible absolute" id="desktop" name="device-type" type="radio"/>
+                                    </label>
+                                    <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="embedded">
+                                        <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">memory</span>
+                                        <span class="font-medium">Embedded Systems (EESs)</span>
+                                        <input class="invisible absolute" id="embedded" name="device-type" type="radio"/>
+                                    </label>
+                                </div>
+                                <div class="mt-8 flex justify-end">
+                                    <button class="btn-add-device-modal flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-4 bg-[var(--primary-color)] text-[#102323] text-sm font-bold leading-normal tracking-[0.015em] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed" id="add-device-final-btn" disabled>
+                                        <span class="truncate">Add Device</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <script src="{{ url_for('static', path='js/dashboard.js') }}" ></script>
+    </body>
+</html>

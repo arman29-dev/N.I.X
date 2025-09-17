@@ -39,7 +39,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0", "quiet-pup-summary.ngrok-free.app"])
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
