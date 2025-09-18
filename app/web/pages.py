@@ -299,12 +299,13 @@ async def logout(req: Request, session: SessionDep, current_user_uid: str|None=N
 @login_required()
 async def dashboard(req: Request, uid: str, session: SessionDep, current_user_uid: str|None=None):
     devices = get_all_devices(owner_uid=uid, session=session)
+    user = get_user_by_id(uid, session)
 
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": req,
             "devices": devices,
-            "user": current_user_uid,
+            "user": user,
         }
     )
