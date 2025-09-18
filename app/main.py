@@ -12,7 +12,7 @@ from .core.config import static_dir, limiter, rate_limit_handler, SECRET_KEY
 from .core.middleware import RequestLoggingMiddleware
 from .API.routes.user import user
 from .core.sLogger import logger
-from .WEB.pages import webApp
+from .web.pages import webApp
 from .models import engine
 
 from contextlib import asynccontextmanager
