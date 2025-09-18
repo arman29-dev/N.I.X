@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.core.config import templates, limiter, AUTH_QRCODE_ROOT_DIR
+from app.core.auth import login_required, verify2FAcode
 from app.core.sLogger import security_logger
 from app.core.emailing import send_email
 
@@ -10,7 +11,7 @@ from app.models.users import User
 from app.models import get_all_devices
 from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 
-from . import webApp, get_2FA_uri, verify2FAcode, login_required, generate_verification_code
+from . import webApp, get_2FA_uri, generate_verification_code
 from .forms import loginForm, registerForm, twoFactorAuthForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
