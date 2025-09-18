@@ -60,7 +60,7 @@ async def login(request: Request, data: Annotated[loginForm, Form()], session: S
             "home.html",
             {
                 "request": request,
-                "error": "Invalid email"
+                "loginError": "Invalid email or not registered"
             }
         )
 
@@ -71,7 +71,7 @@ async def login(request: Request, data: Annotated[loginForm, Form()], session: S
             "home.html",
             {
                 "request": request,
-                "error": "Invalid email or password"
+                "loginError": "Incorrect password for this account"
             }
         )
 
@@ -82,7 +82,7 @@ async def login(request: Request, data: Annotated[loginForm, Form()], session: S
             "home.html",
             {
                 "request": request,
-                "error": "Invalid 2FA code"
+                "loginError": "Invalid 2FA code"
             }
         )
 
@@ -187,13 +187,22 @@ async def forgot_password(req: Request):
 async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
     user = get_user(email, session)
     if user is None:
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Email not registered")
+        return templates.TemplateResponse(
+            "forgot-password.html",
+            {
+                "request": req,
+                "error": "No account found with this email"
+            }
+        )
 
     code = generate_verification_code(user, session)
     if code is None:
-        raise HTTPException(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate verification code"
+        return templates.TemplateResponse(
+            "forgot-password.html",
+            {
+                "request": req,
+                "error": "Failed to generate verification code. Please try again."
+            }
         )
 
     pswdreset_email_template = templates.get_template("email/passwordResetCode.html")
@@ -204,11 +213,11 @@ async def send_reset_code(req: Request, email: Annotated[str, Form()], session: 
     )
 
     if email_stats is False:
-        raise HTTPException(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "msg": "Failed to send password rest code email",
-                "error": msg
+        return templates.TemplateResponse(
+            "forgot-password.html",
+            {
+                "request": req,
+                "error": f"Failed to send email: {msg}"
             }
         )
 

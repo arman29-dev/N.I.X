@@ -20,13 +20,38 @@ function validatePassword(){
   var confirmPassword = document.getElementById("confirm-password").value;
   var error = document.getElementById("error");
 
-  if (password !== confirmPassword) {
-    error.textContent = "Passwords do not match";
+  if (password.length < 8) {
+    error.textContent = "Password must be at least 8 characters long.";
     return false;
-  } else {
-    error.textContent = "";
-    return true;
   }
+
+  if (!/(?=.*[A-Z])/.test(password)) {
+    error.textContent = "Password must contain at least one uppercase letter.";
+    return false;
+  }
+
+  if (!/(?=.*[a-z])/.test(password)) {
+    error.textContent = "Password must contain at least one lowercase letter.";
+    return false;
+  }
+
+  if (!/(?=.*[0-9])/.test(password)) {
+    error.textContent = "Password must contain at least one number.";
+    return false;
+  }
+
+  if (!/(?=.*[-#?!@$ %^&*_])/.test(password)) {
+    error.textContent = "Password must contain at least one special character.";
+    return false;
+  }
+
+  if (password !== confirmPassword) {
+    error.textContent = "Passwords do not match.";
+    return false;
+  }
+
+  error.textContent = "";
+  return true;
 }
 
 
