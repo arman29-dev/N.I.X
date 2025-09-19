@@ -112,17 +112,17 @@
                                     <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="mobile">
                                         <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">phone_iphone</span>
                                         <span class="font-medium">Mobile</span>
-                                        <input class="invisible absolute" id="mobile" name="device-type" type="radio"/>
+                                        <input class="invisible absolute" id="mobile" name="device_type" type="radio" value="smartphone"/>
                                     </label>
                                     <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="desktop">
-                                        <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">desktop_windows</span>
+                                        <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">laptop</span>
                                         <span class="font-medium">Desktop</span>
-                                        <input class="invisible absolute" id="desktop" name="device-type" type="radio"/>
+                                        <input class="invisible absolute" id="desktop" name="device_type" type="radio" value="laptop"/>
                                     </label>
                                     <label class="device-option-label flex items-center p-4 rounded-md border border-[var(--border-color)] cursor-pointer text-white has-[:checked]:border-2 has-[:checked]:border-[var(--primary-color)] has-[:checked]:bg-slate-700 has-[:checked]:text-[var(--primary-color)]" for="embedded">
                                         <span class="material-symbols-outlined mr-4 text-[var(--muted-text-color)]">memory</span>
                                         <span class="font-medium">Embedded Systems (EESs)</span>
-                                        <input class="invisible absolute" id="embedded" name="device-type" type="radio"/>
+                                        <input class="invisible absolute" id="embedded" name="device_type" type="radio" value="embedded"/>
                                     </label>
                                 </div>
                                 <div class="mt-8 flex justify-end">
@@ -133,10 +133,40 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- QR Code Modal -->
+                    <div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" id="qr-modal">
+                        <div class="bg-[#182C2C] rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0" id="qr-modal-content">
+                            <div class="p-8">
+                                <div class="flex justify-between items-start mb-6">
+                                    <h2 class="text-white text-2xl font-bold">Link Your Device!</h2>
+                                    <button class="text-gray-400 hover:text-white transition-colors" id="close-qr-modal-btn">
+                                        <span class="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <p class="text-gray-400 mb-6 text-center">Scan this with N.I.X app to link your device:</p>
+                                <div class="flex justify-center mb-6">
+                                    <div class="bg-white p-4 rounded-lg">
+                                        <img id="qr-code-image" src="" alt="Device QR Code" class="w-48 h-48">
+                                    </div>
+                                </div>
+                                <div class="flex justify-center">
+                                    <button class="bg-[#3df5f5] text-[#102323] px-3 py-2 rounded-md font-bold hover:opacity-90 transition-opacity w-56" id="close-qr-modal-final-btn">
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
+    <script>
+      const API = {
+        "route": "{{ url_for('show_device_qr') }}"
+      };
+    </script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}" ></script>
     </body>
 </html>

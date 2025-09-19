@@ -10,10 +10,11 @@ from slowapi.errors import RateLimitExceeded
 
 from .core.config import static_dir, limiter, rate_limit_handler, SECRET_KEY
 from .core.middleware import RequestLoggingMiddleware
-from .API.routes.user import user
 from .core.sLogger import logger
-from .web.pages import webApp
 from .models import engine
+
+from .web.pages import webApp
+from .api.device import deviceApi
 
 from contextlib import asynccontextmanager
 
@@ -75,5 +76,5 @@ async def global_exception_handler(req: Request, exc: Exception):
 
 
 # Include/Registering routers
-app.include_router(user)
+app.include_router(deviceApi)
 app.include_router(webApp)
