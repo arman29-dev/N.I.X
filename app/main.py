@@ -15,6 +15,7 @@ from .models import engine
 
 from .web.pages import webApp
 from .api.device import deviceApi
+from .api.user import userApi
 
 from contextlib import asynccontextmanager
 
@@ -77,4 +78,5 @@ async def global_exception_handler(req: Request, exc: Exception):
 
 # Include/Registering routers
 app.include_router(deviceApi)
+app.include_router(userApi)
 app.include_router(webApp)

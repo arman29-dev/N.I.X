@@ -1,11 +1,11 @@
 from fastapi import Depends
 from sqlmodel import Session, select, create_engine
 
-from typing import Annotated
+from typing import Annotated, Literal
 from logging import getLogger
 
+from .users import User, Token
 from .devices import Device
-from .users import User
 
 
 logger = getLogger(__name__)
@@ -49,6 +49,31 @@ def get_user_by_id(uid: str, session: SessionDep) -> User|None:
     except Exception as E:
         logger.error(f"Database error while fetching user by ID {uid}: {E}", exc_info=True)
         raise
+
+
+def get_user_access_token(uid: str, session: SessionDep) -> str|None:
+    try:
+        statement = select(Token).where(Token.owner == uid)
+        token = session.exec(statement).first()
+        if token:
+            return token.access_token
+        return None
+
+    except Exception as E:
+        logger.error(f"Database error while fetching access token for user {uid}: {E}", exc_info=True)
+        raise
+
+def register_token(token: Token, session: SessionDep) -> tuple[Literal[200, 500], str]:
+    try:
+        session.add(token)
+        session.commit()
+        session.refresh(token)
+        return 200, "Token successfully registered"
+
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error while registering token for user {token.owner}: {E}", exc_info=True)
+        return 500, str(E)
 
 
 def update_user(user: User, session: SessionDep):

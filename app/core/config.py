@@ -31,6 +31,7 @@ SENDER = str(getenv('EMAIL_HOST'))
 SECRET_KEY = str(getenv('SECRET_KEY'))
 SENDER_PASSWORD = str(getenv('EMAIL_HOST_PASSWORD'))
 
+JWT_HASH_ALGORITHM = "HS256"
 
 def rate_limit_handler(req: Request, exc: RateLimitExceeded):
     client_ip = req.client.host if req.client else 'unknown'

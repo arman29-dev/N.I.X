@@ -1,5 +1,6 @@
+from datetime import datetime, timedelta
 from sqlmodel import Field, SQLModel
-from datetime import datetime
+from uuid import UUID
 
 
 class User(SQLModel, table=True):
@@ -13,3 +14,11 @@ class User(SQLModel, table=True):
 
     twoFA_secret: str|None = Field(max_length=32, nullable=True)
     qr_code_path: str|None = Field(max_length=255, default="", nullable=True)
+
+
+class Token(SQLModel, table=True):
+    uid: UUID = Field(primary_key=True, unique=True)
+    owner: str = Field(foreign_key="user.uid")
+    access_token: str = Field(max_length=512)
+    created_at: datetime = Field(default=datetime.now())
+    expires_at: datetime = Field(default=datetime.now() + timedelta(days=30))

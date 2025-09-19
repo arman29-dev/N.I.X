@@ -1,12 +1,32 @@
-from fastapi import Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 
 from starlette.status import HTTP_302_FOUND
 
-from app.models import SessionDep, get_user_by_id
+from app.models import SessionDep, get_user_by_id, get_user, get_session
+from app.core.jwt_utility import verify_token
 
+from sqlmodel import Session
 from functools import wraps
 from pyotp import TOTP
+
+
+security = HTTPBearer()
+
+
+def check_access(credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)):
+    token = credentials.credentials
+    payload = verify_token(token)
+
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = get_user(str(payload.get('sub')), session)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
 
 
 def login_required(redirect_url: str = "/web/home"):
