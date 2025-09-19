@@ -100,7 +100,7 @@ def get_all_devices(owner_uid: str, session: SessionDep) -> list[Device]:
         raise
 
 
-def add_device(device: Device, session: SessionDep) -> tuple[int, str]:
+def register_device(device: Device, session: SessionDep) -> tuple[int, str]:
     try:
         session.add(device)
         session.commit()

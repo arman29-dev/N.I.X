@@ -1,14 +1,16 @@
-from fastapi import Request, Form
+from fastapi import Request, Form, Depends
 from fastapi.responses import JSONResponse
 
-from app.core.auth import login_required
 from app.core.config import SECRET_KEY
+from app.core.auth import login_required, check_access
 
-from app.models import SessionDep, get_user_access_token
+from app.models import SessionDep, get_user_access_token, register_device
+from app.models.devices import Device
 
 from . import deviceApi, generate_device_qr
+from .forms import deviceForm
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 from typing import Annotated
 
 
@@ -41,3 +43,21 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
             'success': stats,
             'qr_path': data,
         }, status_code=status_code)
+
+
+
+@deviceApi.post('/add-devcie')
+async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(check_access)):
+    device = Device(
+        uid=UUID(device_data.uid),
+        name=device_data.name,
+        type=device_data.type,
+        ip=device_data.ip,
+        owner=user.uid
+    )
+
+    stats, meg = register_device(device, session)
+    if stats != 200:
+        return JSONResponse({'message': meg}, status_code=stats)
+
+    return JSONResponse({'message': meg}, status_code=stats)
