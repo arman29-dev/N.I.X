@@ -12,7 +12,7 @@ from uuid import uuid4
 
 
 
-@userApi.post("/login")
+@userApi.post("/auth/login")
 async def user_login(login_data: loginForm, session: SessionDep):
     user = get_user(login_data.email, session)
     if user is None:

@@ -15,7 +15,7 @@ from typing import Annotated
 
 
 
-@deviceApi.post("/generate-qr")
+@deviceApi.post("/util/generate-qr")
 @login_required()
 async def show_device_qr(req: Request, device_type: Annotated[str, Form()], session: SessionDep, current_user_uid: str|None=None):
     if current_user_uid is None:
@@ -46,7 +46,7 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
 
 
 
-@deviceApi.post('/add-devcie')
+@deviceApi.post('/manage/add-devcie')
 async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(check_access)):
     device = Device(
         uid=UUID(device_data.uid),
