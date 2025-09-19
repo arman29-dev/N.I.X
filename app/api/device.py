@@ -2,6 +2,7 @@ from fastapi import Request, Form
 from fastapi.responses import JSONResponse
 
 from app.core.auth import login_required
+from app.core.config import SECRET_KEY
 
 from app.models import SessionDep, get_user_access_token
 
@@ -9,7 +10,6 @@ from . import deviceApi, generate_device_qr
 
 from uuid import uuid4
 from typing import Annotated
-from datetime import datetime, timedelta
 
 
 
@@ -32,12 +32,9 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
                 'message': 'Please login to the mobile app first.'
             }, status_code=500)
 
-        device_uid = str(uuid4())
-        qr_exp_time = datetime.now() + timedelta(days=30)
-
         status_code, stats, data = generate_device_qr(
-            req=req, device_uid=device_uid, exp_time=qr_exp_time,
-            owner_uid=current_user_uid, user_access_token=user_access_token,
+            device_uid=str(uuid4()), secret=SECRET_KEY,
+            user_access_token=user_access_token, req=req,
         )
 
         return JSONResponse({
