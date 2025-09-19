@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 
 
-@deviceApi.post("/generate-qr",)
+@deviceApi.post("/generate-qr")
 @login_required()
 async def show_device_qr(req: Request, device_type: Annotated[str, Form()], session: SessionDep, current_user_uid: str|None=None):
     if current_user_uid is None:
@@ -26,6 +26,12 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
 
     if device_type == "smartphone":
         user_access_token = get_user_access_token(current_user_uid, session)
+        if user_access_token is None:
+            return JSONResponse({
+                'success': False,
+                'message': 'Please login to the mobile app first.'
+            }, status_code=500)
+
         device_uid = str(uuid4())
         qr_exp_time = datetime.now() + timedelta(days=30)
 
