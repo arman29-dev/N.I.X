@@ -53,7 +53,7 @@ def login(user: User, session: SessionDep, **credentials) -> tuple[Literal[200, 
     if not password.verify(credentials['password'], user.password):
         return 401, {'Error': 'Invalid password'}
 
-    if not verify2FAcode(user.uid, credentials['twoFA'], session):
+    if not verify2FAcode(user.uid, str(credentials['twoFA']), session):
         return 401, {'Error': 'Invalid 2FA code'}
 
-    return 200, credentials
+    return 200, {'success': True}

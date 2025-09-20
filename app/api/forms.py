@@ -12,5 +12,4 @@ class deviceForm(BaseModel):
     name: str
     type: str
     ip: str
-    port: int|None
     owner: str

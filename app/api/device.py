@@ -32,7 +32,7 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
             return JSONResponse({
                 'success': False,
                 'message': 'Please login to the mobile app first.'
-            }, status_code=500)
+            }, status_code=401)
 
         status_code, stats, data = generate_device_qr(
             device_uid=str(uuid4()), secret=SECRET_KEY,
@@ -46,18 +46,18 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
 
 
 
-@deviceApi.post('/manage/add-devcie')
+@deviceApi.post('/manage/add-device')
 async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(check_access)):
     device = Device(
         uid=UUID(device_data.uid),
         name=device_data.name,
         type=device_data.type,
         ip=device_data.ip,
-        owner=user.uid
+        owner=device_data.owner
     )
 
     stats, meg = register_device(device, session)
     if stats != 200:
-        return JSONResponse({'message': meg}, status_code=stats)
+        return JSONResponse({'stats': stats, 'message': meg}, status_code=stats)
 
-    return JSONResponse({'message': meg}, status_code=stats)
+    return JSONResponse({'stats': stats, 'message': meg}, status_code=stats)

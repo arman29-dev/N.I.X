@@ -6,9 +6,7 @@ class Device(SQLModel, table=True):
     uid: UUID = Field(primary_key=True)
     name: str|None = Field(default=None, max_length=100, nullable=True)
     type: str = Field(default="unknown", max_length=50)
-
     ip: str = Field(max_length=45, nullable=False)
-    port: int|None = Field(default=None, nullable=True)
 
     is_active: bool = Field(default=True)
     is_revoked: bool = Field(default=False)
