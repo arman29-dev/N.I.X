@@ -60,4 +60,9 @@ async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(
     if stats != 200:
         return JSONResponse({'stats': stats, 'message': meg}, status_code=stats)
 
-    return JSONResponse({'stats': stats, 'message': meg}, status_code=stats)
+    return JSONResponse(
+        {
+            'stats': stats, 'message': meg,
+            'device_status': device.is_active
+        }, status_code=stats
+    )
