@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -74,6 +74,15 @@ async def global_exception_handler(req: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal Server Error"}
     )
+
+
+@app.get('/')
+def redirect_to_root(req: Request):
+    return RedirectResponse(req.url_for('root'), 302)
+
+@app.get('/server-status')
+def server_status():
+    return JSONResponse({'status': 'Online'}, status_code=200)
 
 
 # Include/Registering routers
