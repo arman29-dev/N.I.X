@@ -135,9 +135,6 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
         qr_path = join(AUTH_QRCODE_ROOT_DIR, f'{user.uid}.png')
         twoFA_qr_img.save(qr_path) # type: ignore
 
-        user.qr_code_path = qr_path
-        update_user(user, session)
-
         return templates.TemplateResponse(
             "2FA-setup.html",
             {
