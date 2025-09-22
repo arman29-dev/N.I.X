@@ -20,11 +20,19 @@ async def user_login(login_data: loginForm, session: SessionDep):
 
     stats, msg = login(user, session, **login_data.model_dump())
     if stats == 200:
-        token = generate_token({'sub': user.email, 'uid': user.uid})
-        msg.update({'access_token': token, 'token_type': 'Bearer'})
-
-        token = Token(uid=uuid4(), owner=user.uid, access_token=token)
+        access_token = generate_token({'sub': user.email, 'uid': user.uid})
+        access_token_uid = uuid4()
+        token = Token(uid=access_token_uid, owner=user.uid, access_token=access_token)
         tkn_reg_stats, tkn_reg_msg = register_token(token, session)
+
+        msg.update(
+            {
+                'access_token': access_token,
+                'access_token_uid': access_token_uid,
+                'token_type': 'Bearer'
+            }
+        )
+
         if tkn_reg_stats != 200:
             return JSONResponse({'Error': tkn_reg_msg}, status_code=tkn_reg_stats)
 
