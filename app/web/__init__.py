@@ -24,7 +24,7 @@ def get_current_user(req: Request, session: SessionDep) -> User | None:
     return None
 
 
-def get_2FA_uri(user: User):
+def get_2FA_uri(user: User) -> str|None:
     if user is not None:
         uri = TOTP(str(user.twoFA_secret)).provisioning_uri(
             name=user.email,
@@ -35,7 +35,7 @@ def get_2FA_uri(user: User):
     return None
 
 
-def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5):
+def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5) -> str:
         code = ''.join(choice('0123456789') for _ in range(6))
         user.verification_code = code
         user.code_expires_at = datetime.now() + timedelta(minutes=expiry_minutes)
@@ -43,3 +43,5 @@ def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5
         stats, msg = update_user(user, session)
         if stats == 200:
             return code
+        else:
+            return msg

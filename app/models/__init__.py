@@ -18,7 +18,7 @@ def get_session():
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-def register_user(user: User, session: SessionDep) -> tuple[int, str]:
+def register_user(user: User, session: SessionDep) -> tuple[Literal[200, 500], str]:
     try:
         session.add(user)
         session.commit()
@@ -76,7 +76,7 @@ def register_token(token: Token, session: SessionDep) -> tuple[Literal[200, 500]
         return 500, str(E)
 
 
-def update_user(user: User, session: SessionDep):
+def update_user(user: User, session: SessionDep) -> tuple[Literal[200, 500], str]:
     try:
         session.add(user)
         session.commit()
@@ -89,7 +89,7 @@ def update_user(user: User, session: SessionDep):
         return 500, str(E)
 
 
-def get_all_devices(owner_uid: str, session: SessionDep) -> list[Device]:
+def get_all_devices(owner_uid: str, session: SessionDep) -> list[Device]|None:
     try:
         statement = select(Device).where(Device.owner == owner_uid)
         devices = session.exec(statement).all()
@@ -100,7 +100,7 @@ def get_all_devices(owner_uid: str, session: SessionDep) -> list[Device]:
         raise
 
 
-def register_device(device: Device, session: SessionDep) -> tuple[int, str]:
+def register_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500], str]:
     try:
         session.add(device)
         session.commit()
@@ -113,7 +113,7 @@ def register_device(device: Device, session: SessionDep) -> tuple[int, str]:
         return 500, str(E)
 
 
-def delete_device(device_uid: str, owner_uid: str, session: SessionDep) -> tuple[int, str]:
+def delete_device(device_uid: str, owner_uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
     try:
         statement = select(Device).where(Device.uid == device_uid, Device.owner == owner_uid)
         device = session.exec(statement).first()
@@ -142,7 +142,7 @@ def get_device(device_uid: str, owner_uid: str, session: SessionDep) -> Device|N
         raise
 
 
-def update_device(device: Device, session: SessionDep) -> tuple[int, str]:
+def update_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500], str]:
     try:
         session.add(device)
         session.commit()
@@ -152,4 +152,22 @@ def update_device(device: Device, session: SessionDep) -> tuple[int, str]:
     except Exception as E:
         session.rollback()
         logger.error(f"Database error while updating device {device.uid}: {E}", exc_info=True)
+        return 500, str(E)
+
+
+def delete_device_registered_token(device_uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+    try:
+        statement = select(Token).where(Device.uid == device_uid)
+        device = session.exec(statement).first()
+
+        if not device:
+            return 404, "Device not found or access denied"
+
+        session.delete(device)
+        session.commit()
+        return 200, "Device successfully deleted"
+
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error while deleting device {device_uid}: {E}", exc_info=True)
         return 500, str(E)

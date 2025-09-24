@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from starlette.status import HTTP_302_FOUND
 
 from app.models import SessionDep, get_user_by_id, get_user, get_session
+from app.models.users import User
 from app.core.jwt_utility import verify_token
 
 from sqlmodel import Session
@@ -15,7 +16,8 @@ from pyotp import TOTP
 security = HTTPBearer()
 
 
-def check_access(credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)):
+def check_access(credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: Session = Depends(get_session)) -> User|None:
     token = credentials.credentials
     payload = verify_token(token)
 
@@ -56,7 +58,7 @@ def login_required(redirect_url: str = "/web/home"):
     return decorator
 
 
-def verify2FAcode(uid: str, code: str, session: SessionDep):
+def verify2FAcode(uid: str, code: str, session: SessionDep) -> bool:
     user = get_user_by_id(uid, session)
     if user is not None:
         totp = TOTP(str(user.twoFA_secret))
