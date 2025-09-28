@@ -21,3 +21,5 @@ class Token(SQLModel, table=True):
     access_token: str = Field(max_length=512)
     created_at: datetime = Field(default=datetime.now())
     expires_at: datetime = Field(default=datetime.now() + timedelta(days=30))
+
+    linked_device: str|None = Field(foreign_key="device.uid", default='xxxxx-xxx-xxx-xxxxx', nullable=True)

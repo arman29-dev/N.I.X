@@ -3,6 +3,7 @@ from sqlmodel import Session, select, create_engine
 
 from typing import Annotated, Literal
 from logging import getLogger
+from uuid import UUID
 
 from .users import User, Token
 from .devices import Device
@@ -115,7 +116,8 @@ def register_device(device: Device, session: SessionDep) -> tuple[Literal[200, 5
 
 def delete_device(device_uid: str, owner_uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
     try:
-        statement = select(Device).where(Device.uid == device_uid, Device.owner == owner_uid)
+        device_uuid = UUID(device_uid)
+        statement = select(Device).where(Device.uid == device_uuid, Device.owner == owner_uid)
         device = session.exec(statement).first()
 
         if not device:
@@ -133,7 +135,7 @@ def delete_device(device_uid: str, owner_uid: str, session: SessionDep) -> tuple
 
 def get_device(device_uid: str, owner_uid: str, session: SessionDep) -> Device|None:
     try:
-        statement = select(Device).where(Device.uid == device_uid, Device.owner == owner_uid)
+        statement = select(Device).where(Device.uid == UUID(device_uid), Device.owner == owner_uid)
         device = session.exec(statement).first()
         return device
 
@@ -155,19 +157,23 @@ def update_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500
         return 500, str(E)
 
 
-def delete_device_registered_token(device_uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+def delete_device_registered_token(token_uid: str, device_data: Device, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
     try:
-        statement = select(Token).where(Device.uid == device_uid)
-        device = session.exec(statement).first()
+        statement = select(Token).where(
+            Token.uid == UUID(token_uid),
+            Token.owner == device_data.owner,
+            Token.linked_device == str(device_data.uid)
+        )
+        token = session.exec(statement).first()
 
-        if not device:
-            return 404, "Device not found or access denied"
+        if not token:
+            return 404, "Token not found or access denied"
 
-        session.delete(device)
+        session.delete(token)
         session.commit()
         return 200, "Device successfully deleted"
 
     except Exception as E:
         session.rollback()
-        logger.error(f"Database error while deleting device {device_uid}: {E}", exc_info=True)
+        logger.error(f"Database error while deleting device {device_data.uid}: {E}", exc_info=True)
         return 500, str(E)

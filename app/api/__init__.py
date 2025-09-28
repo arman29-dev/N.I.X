@@ -27,6 +27,12 @@ userApi = APIRouter(
 
 
 def generate_device_qr(req: Request, **kwargs) -> tuple[Literal[200, 500], bool, str]:
+    # Validate required parameters
+    required_fields = ['device_uid', 'secret', 'user_access_token']
+    for field in required_fields:
+        if field not in kwargs or kwargs[field] is None:
+            return 500, False, f"Missing required field: {field}"
+    
     qr = QRCode(
         version=1,
         box_size=10,

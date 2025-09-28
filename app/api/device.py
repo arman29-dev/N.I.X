@@ -1,17 +1,21 @@
 from fastapi import Request, Form, Depends
 from fastapi.responses import JSONResponse
+from sqlmodel import select
 
-from app.core.config import SECRET_KEY
 from app.core.auth import login_required, check_access
+from app.core.config import SECRET_KEY, DEVICE_QRCODE_ROOT_DIR
 
-from app.models import SessionDep, get_user_access_token, register_device
+from app.models import SessionDep, delete_device, delete_device_registered_token, get_device, get_user_access_token, register_device
 from app.models.devices import Device
+from app.models.users import Token
 
 from . import deviceApi, generate_device_qr
-from .forms import deviceForm
+from .forms import deleteDeviceForm, deviceForm
 
 from uuid import UUID, uuid4
 from typing import Annotated
+from os.path import join
+from os import remove
 
 
 
@@ -48,21 +52,62 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
 
 @deviceApi.post('/manage/add-device')
 async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(check_access)):
+    device_uid = UUID(device_data.uid)
     device = Device(
-        uid=UUID(device_data.uid),
+        uid=device_uid,
         name=device_data.name,
         type=device_data.type,
         ip=device_data.ip,
         owner=device_data.owner
     )
 
-    stats, meg = register_device(device, session)
+    try:
+        token_uid = UUID(device_data.token_ID)
+        statement = select(Token).where(Token.uid == token_uid, Token.owner == user.uid)
+        token = session.exec(statement).first()
+
+        if token is None:
+            return JSONResponse({'stats': 404, 'msg': 'Token not found'}, status_code=404)
+
+        token.linked_device = str(device_uid)
+        session.add(token)
+        session.commit()
+        session.refresh(token)
+
+    except Exception as E:
+        return JSONResponse({'msg': str(E)}, status_code=500)
+
+    stats, msg = register_device(device, session)
     if stats != 200:
-        return JSONResponse({'stats': stats, 'message': meg}, status_code=stats)
+        return JSONResponse({'stats': stats, 'msg': msg}, status_code=stats)
 
     return JSONResponse(
         {
-            'stats': stats, 'message': meg,
+            'stats': stats, 'msg': msg,
             'device_status': device.is_active
         }, status_code=stats
     )
+
+
+@deviceApi.post('/manage/logout')
+async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, user=Depends(check_access)):
+    if delete_info.access_token_uid and delete_info.device_uid is not None:
+
+        device = get_device(delete_info.device_uid, user.uid, session)
+        if device is None:
+            return JSONResponse({'msg': 'No device found'}, status_code=500)
+
+        dd_stats, dd_msg = delete_device(delete_info.device_uid, user.uid, session)
+        if dd_stats == 200:
+            device_qr = join(DEVICE_QRCODE_ROOT_DIR, f'{delete_info.device_uid}.png')
+            try:
+                remove(device_qr)
+
+            except OSError:
+                pass
+
+            atd_stats, atd_msg = delete_device_registered_token(delete_info.access_token_uid, device, session)
+
+            return JSONResponse({'msg': [dd_msg, atd_msg]}, status_code=atd_stats)
+
+    return JSONResponse({'msg': 'No logout data provided'}, status_code=500)
