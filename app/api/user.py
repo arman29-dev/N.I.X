@@ -28,7 +28,7 @@ async def user_login(login_data: loginForm, session: SessionDep):
         msg.update(
             {
                 'access_token': access_token,
-                'access_token_uid': access_token_uid,
+                'access_token_uid': str(access_token_uid),
                 'token_type': 'Bearer'
             }
         )
