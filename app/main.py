@@ -80,7 +80,7 @@ async def global_exception_handler(req: Request, exc: Exception):
 def redirect_to_root(req: Request):
     return RedirectResponse(req.url_for('root'), 302)
 
-@app.get('/server-status')
+@app.get('/ping')
 def server_status():
     return JSONResponse({'status': 'Online'}, status_code=200)
 
