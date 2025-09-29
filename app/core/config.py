@@ -23,8 +23,6 @@ static_dir = ROOT_DIR / "static"
 template_dir = ROOT_DIR / "templates"
 templates = Jinja2Templates(directory=template_dir)
 
-AUTH_QRCODE_ROOT_DIR = static_dir / "auth-QRs"
-DEVICE_QRCODE_ROOT_DIR = static_dir / "device-QRs"
 LOG_DIR = ROOT_DIR / "logs"
 
 SENDER = str(getenv('EMAIL_HOST'))

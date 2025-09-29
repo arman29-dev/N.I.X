@@ -2,8 +2,8 @@ from fastapi import Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.core.config import templates, limiter, AUTH_QRCODE_ROOT_DIR
-from app.core.auth import login_required, verify2FAcode
+from app.core.auth import get_qrcode, login_required, verify2FAcode
+from app.core.config import templates, limiter
 from app.core.sLogger import security_logger
 from app.core.emailing import send_email
 
@@ -19,8 +19,6 @@ from typing import Annotated, Union
 from pyotp import random_base32
 from datetime import datetime
 from logging import getLogger
-from os.path import join
-from qrcode import make
 from uuid import uuid4
 
 
@@ -130,17 +128,19 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is not None:
         qr_uri = get_2FA_uri(user)
-        twoFA_qr_img = make(str(qr_uri))
+        stats, qr_code = get_qrcode(data=qr_uri)
 
-        qr_path = join(AUTH_QRCODE_ROOT_DIR, f'{user.uid}.png')
-        with open(qr_path, 'wb') as qr_file_path:
-            twoFA_qr_img.save(qr_file_path)
+        if stats != 200:
+            return JSONResponse({
+                'message': 'Unable to generate QR Code!'
+            }, status_code=stats)
 
         return templates.TemplateResponse(
             "2FA-setup.html",
             {
                 "request": req,
                 "user": user,
+                "qr_data": qr_code
             }
         )
 
@@ -163,13 +163,13 @@ def verify2FA(request: Request, uid: str, data: Annotated[twoFactorAuthForm, For
                 print(f"Email Sent Status: {status}->{msg}")
 
             return JSONResponse({
-                'success': True,
-                'message': '2FA enabled successfully',
-            })
+                # 'success': True,
+                'message': '2FA successfully enabled!',
+            }, status_code=200)
 
 
         return JSONResponse({
-            'success': False,
+            # 'success': False,
             'message': 'Invalid verification code',
         }, status_code=HTTP_400_BAD_REQUEST)
 

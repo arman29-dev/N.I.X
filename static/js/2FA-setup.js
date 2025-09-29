@@ -71,8 +71,8 @@ async function verifyCode() {
         });
 
         const data = await response.json();
-        if (response.ok && data.success) {
-            showStatus('✅ 2FA successfully enabled!', 'success');
+        if (response.ok) {
+          showStatus('✅ '+data.message, 'success');
             verifyButton.textContent = '2FA Enabled';
             document.getElementById('verificationCode').disabled = true;
 

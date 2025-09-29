@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            if (response.ok && data.success) {
+            if (response.ok) {
                 closeModal();
                 const qrPath = data.qr_path;
                 openQrModal(qrPath);

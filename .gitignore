@@ -210,7 +210,5 @@ __marimo__/
 /Docs
 /logs
 /Database
-/static/auth-QRs
-/static/device-QRs
 /static/css/test.css
 /templates/test.html

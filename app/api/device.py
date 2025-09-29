@@ -2,20 +2,18 @@ from fastapi import Request, Form, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
-from app.core.auth import login_required, check_access
-from app.core.config import SECRET_KEY, DEVICE_QRCODE_ROOT_DIR
+from app.core.config import SECRET_KEY
+from app.core.auth import login_required, check_access, get_qrcode
 
 from app.models import SessionDep, delete_device, delete_device_registered_token, get_device, get_user_access_token, register_device
 from app.models.devices import Device
 from app.models.users import Token
 
-from . import deviceApi, generate_device_qr
+from . import deviceApi
 from .forms import deleteDeviceForm, deviceForm
 
 from uuid import UUID, uuid4
 from typing import Annotated
-from os.path import join
-from os import remove
 
 
 
@@ -38,13 +36,12 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
                 'message': 'Please login to the mobile app first.'
             }, status_code=401)
 
-        status_code, stats, data = generate_device_qr(
+        status_code, data = get_qrcode(qr_for='device',
             device_uid=str(uuid4()), secret=SECRET_KEY,
-            user_access_token=user_access_token, req=req,
+            user_access_token=user_access_token
         )
 
         return JSONResponse({
-            'success': stats,
             'qr_path': data,
         }, status_code=status_code)
 
@@ -99,13 +96,6 @@ async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, 
 
         dd_stats, dd_msg = delete_device(delete_info.device_uid, user.uid, session)
         if dd_stats == 200:
-            device_qr = join(DEVICE_QRCODE_ROOT_DIR, f'{delete_info.device_uid}.png')
-            try:
-                remove(device_qr)
-
-            except OSError:
-                pass
-
             atd_stats, atd_msg = delete_device_registered_token(delete_info.access_token_uid, device, session)
 
             return JSONResponse({'msg': [dd_msg, atd_msg]}, status_code=atd_stats)
