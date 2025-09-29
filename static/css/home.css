@@ -39,6 +39,11 @@ body {
     'opsz' 24
 }
 
+input[name="twoFA"][type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 /* Login with Passkey button - Light Green Liquid Flow 3D Effect */
 .passkey-btn {
     position: relative;
