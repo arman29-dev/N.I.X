@@ -1,0 +1,22 @@
+:root {
+    --primary-color: #3df5f5;
+}
+
+.group:hover .group-hover\:block {
+    display: block;
+}
+
+.group .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    transition:
+        visibility 0s,
+        opacity 0.2s linear;
+    transition-delay: 0s, 0.2s;
+}
+
+.group:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s, 0s;
+}

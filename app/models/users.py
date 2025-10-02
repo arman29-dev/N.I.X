@@ -13,6 +13,7 @@ class User(SQLModel, table=True):
     code_expires_at: datetime|None = Field(default=datetime.now(), nullable=True)
 
     twoFA_secret: str|None = Field(max_length=32, nullable=True)
+    is_2FA_enabled: bool = Field(default=True)
 
 
 class Token(SQLModel, table=True):

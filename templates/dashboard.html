@@ -36,7 +36,7 @@
                             </svg>
                         </button>
                         <div class="tooltip absolute right-0 top-full mt-2 w-48 rounded-md bg-[#182C2C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 transition-opacity duration-300 ease-in-out">
-                            <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="#">Account</a>
+                            <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('account_center', uid=user.uid) }}">Account</a>
                             <a class="block px-4 py-2 text-sm text-red-400 transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('logout') }}">Logout</a>
                         </div>
                     </div>

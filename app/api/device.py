@@ -3,9 +3,9 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from app.core.config import SECRET_KEY
-from app.core.auth import login_required, check_access, get_qrcode
+from app.core.auth import login_required, check_access, get_qrcode, verify2FAcode
 
-from app.models import SessionDep, delete_device, delete_device_registered_token, get_device, get_user_access_token, register_device
+from app.models import SessionDep, delete_device, delete_device_registered_token, delete_token, get_device, get_user_access_token, register_device, get_user_devices
 from app.models.devices import Device
 from app.models.users import Token
 
@@ -44,7 +44,6 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
         return JSONResponse({
             'qr_path': data,
         }, status_code=status_code)
-
 
 
 @deviceApi.post('/manage/add-device')
@@ -101,3 +100,27 @@ async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, 
             return JSONResponse({'msg': [dd_msg, atd_msg]}, status_code=atd_stats)
 
     return JSONResponse({'msg': 'No logout data provided'}, status_code=500)
+
+
+@deviceApi.delete('/manage/delete-all')
+@login_required()
+async def delete_all_devices(req: Request, session: SessionDep, current_user_uid: str|None=None):
+    data = await req.json()
+    twofa_code = data.get('twofa_code')
+
+    if current_user_uid is None:
+        return JSONResponse({'message': 'Authentication Failure!'}, status_code=401)
+
+    if not verify2FAcode(current_user_uid, twofa_code, session):
+        return JSONResponse({'message': 'Invalid 2FA code'}, status_code=401)
+
+    devices = get_user_devices(current_user_uid, session)
+    if devices is None:
+        return JSONResponse({'message': 'Unable to fetch devices fot this action!'}, status_code=500)
+
+    for device in devices:
+        delete_device(str(device.uid), current_user_uid, session)
+        delete_token(current_user_uid, session)
+
+
+    return JSONResponse({'message': 'All devices deleted successfully'}, status_code=200)

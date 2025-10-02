@@ -8,7 +8,7 @@ from app.core.sLogger import security_logger
 from app.core.emailing import send_email
 
 from app.models.users import User
-from app.models import get_all_devices
+from app.models import get_user_devices
 from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 
 from . import webApp, get_2FA_uri, generate_verification_code
@@ -282,6 +282,20 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
     return stats
 
 
+# Account Center Route
+@webApp.get("/account/{uid}", response_class=HTMLResponse)
+@login_required()
+async def account_center(req: Request, session: SessionDep, current_user_uid: str|None=None):
+    user = get_user_by_id(str(current_user_uid), session)
+    return templates.TemplateResponse(
+        "account-center.html",
+        {
+            "request": req,
+            "user": user,
+        }
+    )
+
+
 # Logout Route
 @webApp.get("/account/logout/")
 @login_required()
@@ -297,7 +311,7 @@ async def logout(req: Request, session: SessionDep, current_user_uid: str|None=N
 @webApp.get("/dashboard/{uid}", response_class=HTMLResponse)
 @login_required()
 async def dashboard(req: Request, uid: str, session: SessionDep, current_user_uid: str|None=None):
-    devices = get_all_devices(owner_uid=uid, session=session)
+    devices = get_user_devices(owner_uid=uid, session=session)
     user = get_user_by_id(uid, session)
 
     return templates.TemplateResponse(

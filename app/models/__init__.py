@@ -31,6 +31,36 @@ def register_user(user: User, session: SessionDep) -> tuple[Literal[200, 500], s
         return 500, str(E)
 
 
+def delete_user(uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+    try:
+        # Delete all user devices
+        devices_statement = select(Device).where(Device.owner == uid)
+        devices = session.exec(devices_statement).all()
+        for device in devices:
+            session.delete(device)
+
+        # Delete all user tokens
+        tokens_statement = select(Token).where(Token.owner == uid)
+        tokens = session.exec(tokens_statement).all()
+        for token in tokens:
+            session.delete(token)
+
+        # Delete user
+        user_statement = select(User).where(User.uid == uid)
+        user = session.exec(user_statement).first()
+        if not user:
+            return 404, "User not found"
+
+        session.delete(user)
+        session.commit()
+        return 200, "User and all associated data deleted successfully"
+
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error while deleting user {uid}: {E}", exc_info=True)
+        return 500, str(E)
+
+
 def get_user(email: str, session: SessionDep) -> User|None:
     try:
         user = session.get(User, {"email": email})
@@ -90,7 +120,7 @@ def update_user(user: User, session: SessionDep) -> tuple[Literal[200, 500], str
         return 500, str(E)
 
 
-def get_all_devices(owner_uid: str, session: SessionDep) -> list[Device]|None:
+def get_user_devices(owner_uid: str, session: SessionDep) -> list[Device]|None:
     try:
         statement = select(Device).where(Device.owner == owner_uid)
         devices = session.exec(statement).all()
@@ -156,6 +186,23 @@ def update_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500
         logger.error(f"Database error while updating device {device.uid}: {E}", exc_info=True)
         return 500, str(E)
 
+
+def delete_token(user_id: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+    try:
+        statement = select(Token).where(Token.owner == user_id)
+        token = session.exec(statement).first()
+
+        if token is None:
+            return 404, "Token not found or access denied"
+
+        session.delete(token)
+        session.commit()
+        return 200, "Token successfully deleted"
+
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error while deleting token: {E}", exc_info=True)
+        return 500, str(E)
 
 def delete_device_registered_token(token_uid: str, device_data: Device, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
     try:
