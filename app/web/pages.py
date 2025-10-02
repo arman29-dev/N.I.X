@@ -11,7 +11,7 @@ from app.models.users import User
 from app.models import get_user_devices
 from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
 
-from . import webApp, get_2FA_uri, generate_verification_code
+from . import webApp, get_2FA_uri
 from .forms import loginForm, registerForm, twoFactorAuthForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
@@ -182,51 +182,10 @@ async def forgot_password(req: Request):
         {"request": req}
     )
 
-@webApp.post("/account/security/forgot-password")
-async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
-    user = get_user(email, session)
-    if user is None:
-        return templates.TemplateResponse(
-            "forgot-password.html",
-            {
-                "request": req,
-                "error": "No account found with this email"
-            }
-        )
-
-    code = generate_verification_code(user, session)
-    if code is None:
-        return templates.TemplateResponse(
-            "forgot-password.html",
-            {
-                "request": req,
-                "error": "Failed to generate verification code. Please try again."
-            }
-        )
-
-    pswdreset_email_template = templates.get_template("email/passwordResetCode.html")
-    email_stats, msg = send_email(
-        to=email,
-        subject="N.I.X Password Reset",
-        body=pswdreset_email_template.render(code=code)
-    )
-
-    if email_stats is False:
-        return templates.TemplateResponse(
-            "forgot-password.html",
-            {
-                "request": req,
-                "error": f"Failed to send email: {msg}"
-            }
-        )
-
-    pswd_rst_url = req.url_for('password_reset_form', uid=user.uid).include_query_params(code=secure_password.hash(code))
-    return RedirectResponse(pswd_rst_url, status_code=HTTP_302_FOUND)
-
 
 # Password Reset Route
 @webApp.get("/account/security/password-reset/{uid}", response_class=HTMLResponse)
-async def password_reset_form(req: Request, uid: str, code: Union[str, None], session: SessionDep):
+async def password_reset_form(req: Request, uid: str, session: SessionDep, code: Union[str, None] = None):
     user = get_user_by_id(uid, session)
     if user is None:
         return RedirectResponse(req.url_for('forgot_password'), status_code=HTTP_302_FOUND)
@@ -246,18 +205,21 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
     if user is None:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid user")
 
-    verification_code_stats = secure_password.verify(str(data.verification_code), str(data.verification_code_hash))
-    if user.code_expires_at is None:
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
-
-    # Check if code is expired
-    if user.code_expires_at < datetime.now():
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Verification code has expired. Please request a new one.")
-
-    # Verify the code
-    if not verification_code_stats:
-        if not verify2FAcode(uid, str(data.verification_code), session):
+    # Check if verification_code_hash is provided (forgot password flow)
+    if data.verification_code_hash and data.verification_code_hash.strip() and data.verification_code_hash != 'None':
+        # Forgot password flow - verify email code
+        if user.code_expires_at is None:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
+        
+        if user.code_expires_at < datetime.now():
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Verification code has expired. Please request a new one.")
+        
+        if not secure_password.verify(str(data.verification_code), str(data.verification_code_hash)):
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid verification code")
+    else:
+        # Account center flow - verify 2FA code
+        if not verify2FAcode(uid, str(data.verification_code), session):
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid 2FA code")
 
     user.password = secure_password.hash(data.new_pswd)
     stats, msg = update_user(user, session)

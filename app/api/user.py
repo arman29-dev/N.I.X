@@ -1,7 +1,7 @@
-from fastapi import Request
+from fastapi import Request, Form
 from fastapi.responses import JSONResponse
 
-from app.core.auth import login_required, verify2FAcode
+from app.core.auth import login_required, verify2FAcode, generate_verification_code
 from app.core.jwt_utility import generate_token
 from app.core.emailing import send_email
 from app.core.config import templates
@@ -12,7 +12,8 @@ from app.models import SessionDep, get_user, get_user_by_id, register_token, del
 from . import userApi, login
 from .forms import loginForm
 
-from typing import Union
+from passlib.hash import pbkdf2_sha256 as secure_password
+from typing import Union, Annotated
 from uuid import uuid4
 
 
@@ -42,6 +43,34 @@ async def user_login(login_data: loginForm, session: SessionDep):
             return JSONResponse({'Error': tkn_reg_msg}, status_code=tkn_reg_stats)
 
     return JSONResponse(msg, status_code=stats)
+
+
+@userApi.post("/account/security/forgot-password")
+async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
+    user = get_user(email, session)
+    if user is None:
+        return JSONResponse({
+            "error": "No account found with this email"
+        }, status_code=404)
+
+    code = generate_verification_code(user, session)
+    if code is None:
+        return JSONResponse({
+            "error": "Failed to generate verification code. Please try again."
+        }, status_code=500)
+
+    pswdreset_email_template = templates.get_template("email/passwordResetCode.html")
+    email_stats, msg = send_email(
+        to=email,
+        subject="N.I.X Password Reset",
+        body=pswdreset_email_template.render(code=code)
+    )
+
+    if email_stats is False:
+        return JSONResponse({"error": f"Failed to send email: {msg}"}, status_code=500)
+
+    pswd_rst_url = req.url_for('password_reset_form', uid=user.uid).include_query_params(code=secure_password.hash(code))
+    return JSONResponse({"endpoint": str(pswd_rst_url)}, status_code=200)
 
 
 @userApi.put('/auth/2FA/manage')

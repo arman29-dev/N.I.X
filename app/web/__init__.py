@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Request
 
-from app.models import SessionDep, get_user_by_id, update_user
+from app.models import SessionDep, get_user_by_id
 from app.models.users import User
 
 from pyotp import TOTP
-from secrets import choice
-from datetime import timedelta, datetime
+
 
 
 
@@ -33,15 +32,3 @@ def get_2FA_uri(user: User) -> str|None:
         return uri
 
     return None
-
-
-def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5) -> str:
-        code = ''.join(choice('0123456789') for _ in range(6))
-        user.verification_code = code
-        user.code_expires_at = datetime.now() + timedelta(minutes=expiry_minutes)
-
-        stats, msg = update_user(user, session)
-        if stats == 200:
-            return code
-        else:
-            return msg

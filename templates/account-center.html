@@ -85,10 +85,10 @@
                                                 Change your password
                                             </p>
                                         </div>
-                                        <button class="flex items-center justify-center rounded-md h-10 px-4 bg-[#224949] text-white hover:bg-red-500 transition-colors text-sm font-bold"
-                                         onclick="window.location.href={{ url_for('password_reset_form', uid=user.uid) }}">
+                                        <a class="flex items-center justify-center rounded-md h-10 px-4 bg-[#224949] text-white hover:bg-red-500 transition-colors text-sm font-bold"
+                                         href="{{ url_for('password_reset_form', uid=user.uid) }}">
                                             Change
-                                        </button>
+                                        </a>
                                     </div>
                                     <div class="flex items-center justify-between p-4 bg-[#1A3838] rounded-md" >
                                         <div>

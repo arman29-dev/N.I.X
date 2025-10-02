@@ -23,4 +23,4 @@ class passwordResetForm(BaseModel):
     new_pswd: str = Field(min_length=8, max_length=128)
     cnfm_pswd: str
     verification_code: int
-    verification_code_hash: str
+    verification_code_hash: str = ""

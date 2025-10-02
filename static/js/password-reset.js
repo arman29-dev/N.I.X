@@ -1,60 +1,68 @@
 function togglePasswordVisibility(inputId, button) {
   const input = document.getElementById(inputId);
-  const icon = button.querySelector('span');
-  if (input.type === 'password') {
-    input.type = 'text';
-    icon.textContent = 'visibility_off';
+  const icon = button.querySelector("span");
+  if (input.type === "password") {
+    input.type = "text";
+    icon.textContent = "visibility_off";
   } else {
-    input.type = 'password';
-    icon.textContent = 'visibility';
+    input.type = "password";
+    icon.textContent = "visibility";
   }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const profileButton = document.querySelector('.group.relative button');
-    const tooltip = document.querySelector('.tooltip');
+document.addEventListener("DOMContentLoaded", function () {
+  const profileButton = document.querySelector(".group.relative button");
+  const tooltip = document.querySelector(".tooltip");
 
-    profileButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        tooltip.classList.toggle('invisible');
-        tooltip.classList.toggle('opacity-0');
-    });
+  profileButton.addEventListener("click", function (e) {
+    e.preventDefault();
+    tooltip.classList.toggle("invisible");
+    tooltip.classList.toggle("opacity-0");
+  });
 
-    document.addEventListener('click', function(e) {
-        if (!profileButton.contains(e.target) && !tooltip.contains(e.target)) {
-            tooltip.classList.add('invisible', 'opacity-0');
-        }
-    });
+  document.addEventListener("click", function (e) {
+    if (!profileButton.contains(e.target) && !tooltip.contains(e.target)) {
+      tooltip.classList.add("invisible", "opacity-0");
+    }
+  });
 });
 
+var changePswdBtn = document.getElementById("change-pswd-btn");
+
 function showSuccessMessage(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
+  changePswdBtn.innerText = "Setting New Password...";
 
-    fetch(form.action, {
-        method: 'POST',
-        body: formData
-    }).then(response => {
-        if (response.ok) {
-            const banner = document.getElementById('success-banner');
-            const overlay = document.getElementById('success-overlay');
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
 
-            overlay.style.display = 'block';
-            overlay.style.opacity = '1';
+  fetch(form.action, {
+    method: "POST",
+    body: formData,
+  }).then((response) => {
+    if (response.ok) {
+      const banner = document.getElementById("success-banner");
+      const overlay = document.getElementById("success-overlay");
 
-            banner.style.display = 'flex';
-            banner.style.opacity = '1';
-            banner.style.transform = 'translate(-50%, -50%) scale(1)';
-            banner.classList.add('success-banner');
-        }
-    });
+      overlay.style.display = "block";
+      overlay.style.opacity = "1";
+
+      banner.style.display = "flex";
+      banner.style.opacity = "1";
+      banner.style.transform = "translate(-50%, -50%) scale(1)";
+      banner.classList.add("success-banner");
+    }
+  });
 }
 
-function validatePassword(event){
+function validatePassword(event) {
   var password = document.getElementById("new-password").value;
   var confirmPassword = document.getElementById("confirm-new-password").value;
   var error = document.getElementById("error");
+
+  changePswdBtn.disabled = true;
+  changePswdBtn.classList.add("cursor-not-allowed");
+  changePswdBtn.innerText = "Validating Password...";
 
   if (password.length < 8) {
     error.textContent = "Password must be at least 8 characters long.";

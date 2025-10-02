@@ -5,17 +5,20 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.util.typing import Literal
 from starlette.status import HTTP_302_FOUND
 
-from app.models import SessionDep, get_user_by_id, get_user, get_session
 from app.models.users import User
 from app.core.jwt_utility import verify_token
+from app.models import SessionDep, get_user_by_id, get_user, get_session, update_user
 
+from datetime import timedelta, datetime
 from sqlmodel import Session
 from base64 import b64encode
 from functools import wraps
+from secrets import choice
 from qrcode import QRCode
 from io import BytesIO
 from pyotp import TOTP
 from json import dumps
+
 
 
 security = HTTPBearer()
@@ -71,6 +74,18 @@ def verify2FAcode(uid: str, code: str, session: SessionDep) -> bool:
             return True
 
     return False
+
+
+def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5) -> str:
+        code = ''.join(choice('0123456789') for _ in range(6))
+        user.verification_code = code
+        user.code_expires_at = datetime.now() + timedelta(minutes=expiry_minutes)
+
+        stats, msg = update_user(user, session)
+        if stats == 200:
+            return code
+        else:
+            return msg
 
 
 def get_qrcode(qr_for: str='2FA', data: str|None=None, **kwargs) -> tuple[Literal[200, 500], str]:
