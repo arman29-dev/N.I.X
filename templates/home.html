@@ -47,10 +47,10 @@
                                     <h2 class="text-3xl font-bold mb-6 text-center" >
                                         Welcome Back
                                     </h2>
-                                    <form method="post" id="login-form" action="/web/auth/login/">
+                                    <div id="login-form">
                                         <div class="space-y-6">
                                             <input class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
-                                                placeholder="Email" required="" type="email" name="email"
+                                                id="login-email" placeholder="Email" required="" type="email" name="email"
                                             />
                                             <div class="relative">
                                                 <input class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all pr-12"
@@ -62,16 +62,21 @@
                                                     <span class="material-symbols-outlined">visibility_off</span>
                                                 </button>
                                             </div>
-                                            <input
-                                                class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
-                                                placeholder="2FA-OTP" type="number" name="twoFA" required
-                                            />
+                                            <div class="flex gap-2" id="2fa-input-div">
+                                                <input
+                                                    class="flex-1 bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
+                                                    id="2fa-input" placeholder="2FA-OTP" type="number" name="twoFA" required autocomplete="off"
+                                                />
+                                                <button
+                                                    class="bg-[var(--primary-color)] text-[#102323] font-bold px-6 rounded-md hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105 hover:cursor-pointer"
+                                                    type="submit" id="2fa-verify-btn">Verify</button>
+                                            </div>
                                         </div>
-                                        <span class="error-message">{{ loginError }}</span>
+                                        <span class="error-message" id="login-error-msg"></span>
                                         <div class="mt-8">
                                             <button
                                                 class="w-full bg-[var(--primary-color)] text-[#102323] font-bold py-3 rounded-md hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105"
-                                                type="submit">Login</button>
+                                                id="submit-login-data-btn" type="submit">Login</button>
                                         </div>
                                         <div class="mt-4">
                                             <button
@@ -83,7 +88,7 @@
                                             <span class="mx-2">|</span>
                                             <a class="hover:text-[var(--primary-color)] transition" href="#" id="show-register">Create a New Account</a>
                                         </div>
-                                    </form>
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-back">
@@ -142,6 +147,11 @@
             </div>
         </div>
 
+        <script>
+          const API_ENDPOINT = {
+            "login": "{{ url_for('web_login') }}",
+          }
+        </script>
         <script src="{{ url_for('static', path='js/home.js') }}"></script>
     </body>
 </html>

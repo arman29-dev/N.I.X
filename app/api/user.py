@@ -3,11 +3,15 @@ from fastapi.responses import JSONResponse
 
 from app.core.auth import login_required, verify2FAcode, generate_verification_code
 from app.core.jwt_utility import generate_token
+from app.core.config import templates, limiter
 from app.core.emailing import send_email
-from app.core.config import templates
 
 from app.models.users import Token
 from app.models import SessionDep, get_user, get_user_by_id, register_token, delete_user, update_user
+
+from app.core.sLogger import security_logger
+
+from app.web import webApp
 
 from . import userApi, login
 from .forms import loginForm
@@ -16,6 +20,48 @@ from passlib.hash import pbkdf2_sha256 as secure_password
 from typing import Union, Annotated
 from uuid import uuid4
 
+
+
+# Login Route
+@webApp.post("/auth/login/")
+@limiter.limit("5/minute")
+async def web_login(request: Request, data: Annotated[loginForm, Form()], session: SessionDep):
+    client_ip = request.client.host if request.client else 'unknown'
+
+    security_logger.info(f"Login attempt for email: {data.email} from IP: {client_ip}")
+
+    user = get_user(data.email, session)
+    if user is None:
+        security_logger.warning(f"Failed login attempt - user not found: {data.email} from IP: {client_ip}")
+
+        return JSONResponse({
+            "loginError": "Invalid email or not registered"
+        }, status_code=404)
+
+    if not secure_password.verify(data.password, user.password):
+        security_logger.warning(f"Failed login attempt - incorrect password for: {data.email} from IP: {client_ip}")
+
+        return JSONResponse({
+            "loginError": "Incorrect password for this account"
+        }, status_code=401)
+
+    dashboardUrl = request.url_for('dashboard', uid=user.uid)
+    twoFA_enable_stats = user.is_2FA_enabled
+
+    if twoFA_enable_stats:
+       return JSONResponse({
+           "is2FAenabled": twoFA_enable_stats,
+           "redirectUrl": str(dashboardUrl),
+           "twoFAverificationEndpoint": str(request.url_for('web2FAverification'))
+       }, status_code=302)
+
+    else:
+        security_logger.info(f"Successful login for: {data.email} from IP: {client_ip}")
+        request.session[user.uid] = data.email
+        return JSONResponse({
+            "is2FAenabled": twoFA_enable_stats,
+            "redirectUrl": str(dashboardUrl)
+        }, status_code=302)
 
 
 @userApi.post("/auth/login")
@@ -71,6 +117,35 @@ async def send_reset_code(req: Request, email: Annotated[str, Form()], session: 
 
     pswd_rst_url = req.url_for('password_reset_form', uid=user.uid).include_query_params(code=secure_password.hash(code))
     return JSONResponse({"endpoint": str(pswd_rst_url)}, status_code=200)
+
+
+@webApp.post('/auth/2FA/verify')
+async def web2FAverification(req: Request, session: SessionDep):
+    client_ip = req.client.host if req.client else 'unknown'
+
+    reqData = await req.json()
+    code = reqData.get('code')
+    email = reqData.get('email')
+
+    user = get_user(email, session)
+    if user is None:
+        return JSONResponse({
+            "loginError": "User not found with this email!"
+        }, status_code=404)
+
+    if verify2FAcode(user.uid, code, session) is not True:
+        security_logger.warning(f"Failed login attempt - invalid 2FA code for: {email} from IP: {client_ip}")
+
+        return JSONResponse({
+            "loginError": "Invalid 2FA code"
+        }, status_code=401)
+
+    security_logger.info(f"Successful login for: {email} from IP: {client_ip}")
+    req.session[user.uid] = email
+
+    return JSONResponse({
+        "redirectUrl": str(req.url_for('dashboard', uid=user.uid))
+    }, 200)
 
 
 @userApi.put('/auth/2FA/manage')

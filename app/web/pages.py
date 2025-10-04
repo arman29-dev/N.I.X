@@ -9,10 +9,10 @@ from app.core.emailing import send_email
 
 from app.models.users import User
 from app.models import get_user_devices
-from app.models import SessionDep, get_user, get_user_by_id, register_user, update_user
+from app.models import SessionDep, get_user_by_id, register_user, update_user
 
 from . import webApp, get_2FA_uri
-from .forms import loginForm, registerForm, twoFactorAuthForm, passwordResetForm
+from .forms import registerForm, twoFactorAuthForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
 from typing import Annotated, Union
@@ -43,52 +43,6 @@ async def home(req: Request):
         {"request": req}
     )
 
-# Login Route
-@webApp.post("/auth/login/")
-@limiter.limit("5/minute")
-async def login(request: Request, data: Annotated[loginForm, Form()], session: SessionDep):
-    client_ip = request.client.host if request.client else 'unknown'
-
-    security_logger.info(f"Login attempt for email: {data.email} from IP: {client_ip}")
-
-    user = get_user(data.email, session)
-    if user is None:
-        security_logger.warning(f"Failed login attempt - user not found: {data.email} from IP: {client_ip}")
-
-        return templates.TemplateResponse(
-            "home.html",
-            {
-                "request": request,
-                "loginError": "Invalid email or not registered"
-            }
-        )
-
-    if not secure_password.verify(data.password, user.password):
-        security_logger.warning(f"Failed login attempt - incorrect password for: {data.email} from IP: {client_ip}")
-
-        return templates.TemplateResponse(
-            "home.html",
-            {
-                "request": request,
-                "loginError": "Incorrect password for this account"
-            }
-        )
-
-    if verify2FAcode(user.uid, str(data.twoFA), session) is not True:
-        security_logger.warning(f"Failed login attempt - invalid 2FA code for: {data.email} from IP: {client_ip}")
-
-        return templates.TemplateResponse(
-            "home.html",
-            {
-                "request": request,
-                "loginError": "Invalid 2FA code"
-            }
-        )
-
-    security_logger.info(f"Successful login for: {data.email} from IP: {client_ip}")
-
-    request.session[user.uid] = data.email
-    return RedirectResponse(request.url_for('dashboard', uid=user.uid), status_code=HTTP_302_FOUND)
 
 # Register Route
 @webApp.post("/auth/register/")
@@ -210,10 +164,10 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
         # Forgot password flow - verify email code
         if user.code_expires_at is None:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
-        
+
         if user.code_expires_at < datetime.now():
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Verification code has expired. Please request a new one.")
-        
+
         if not secure_password.verify(str(data.verification_code), str(data.verification_code_hash)):
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid verification code")
     else:

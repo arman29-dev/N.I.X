@@ -14,6 +14,90 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+const loginErrorMsg = document.getElementById('login-error-msg');
+
+const emailInput = document.getElementById('login-email');
+const pswdInput = document.getElementById('login-password');
+const sbmtLoginDataBtn = document.getElementById('submit-login-data-btn');
+
+const twoFAinputDiv = document.getElementById('2fa-input-div');
+const twoFAinput = document.getElementById('2fa-input');
+const twoFAVerifyBtn = document.getElementById('2fa-verify-btn');
+
+twoFAinput.disabled = true;
+twoFAVerifyBtn.disabled = true;
+twoFAinputDiv.classList.add('hidden');
+
+sbmtLoginDataBtn.addEventListener('click', async () => {
+  const email = emailInput.value;
+  const pswd = pswdInput.value;
+  const formData = new FormData();
+
+  sbmtLoginDataBtn.disabled = true;
+  sbmtLoginDataBtn.innerText = "Verifying Credencials...";
+  sbmtLoginDataBtn.classList.add('cursor-not-allowed');
+  sbmtLoginDataBtn.classList.remove('hover:scale-105');
+
+  formData.append('email', email);
+  formData.append('password', pswd);
+
+  try {
+    const loginResponse = await fetch(API_ENDPOINT.login, {
+      method: "POST",
+      body: formData
+    })
+
+    const loginResponseData = await loginResponse.json();
+
+    if (loginResponse.status === 302){
+      sbmtLoginDataBtn.innerText = "Credencials Verified ✔️"
+      if (loginResponseData.is2FAenabled) {
+        emailInput.ariaPlaceholder = email; emailInput.disabled = true; emailInput.classList.add('cursor-not-allwoed')
+        pswdInput.ariaPlaceholder = pswd; pswdInput.disabled = true; pswdInput.classList.add('cursor-not-allwoed')
+
+        twoFAinput.disabled = false;
+        twoFAVerifyBtn.disabled = false;
+        twoFAinputDiv.classList.remove('hidden');
+
+        twoFAVerifyBtn.addEventListener('click', () => {
+          twoFAVerifyBtn.disabled = true;
+          twoFAVerifyBtn.innerText = "Verifying...";
+          twoFAVerifyBtn.classList.add('cursor-not-allowed');
+          twoFAVerifyBtn.classList.remove('hover:scale-105', 'hover:cursor-pointer');
+          verify2FA(email, twoFAinput.value, loginResponseData.twoFAverificationEndpoint);
+        })
+      } else {
+        window.location.href = loginResponseData.redirectUrl;
+      }
+    } else {
+      loginErrorMsg.innerText = loginResponseData.loginError;
+    }
+  } catch (error) {
+    loginErrorMsg.innerText = error || "Unable to log you in.";
+  }
+})
+
+
+async function verify2FA(email, code, endpoint) {
+  try {
+    const verificationRes = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code, email: email }),
+    })
+
+    const verificationResData = await verificationRes.json();
+
+    if (verificationRes.ok) {
+      window.location.href = verificationResData.redirectUrl;
+    } else {
+      loginErrorMsg.innerText = verificationResData.loginError;
+    }
+  } catch (error) {
+    loginErrorMsg.innerText = error || "Unable to verify you!";
+  }
+}
+
 
 function validatePassword(){
   var password = document.getElementById("register-password").value;

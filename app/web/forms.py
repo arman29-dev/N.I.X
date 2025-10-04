@@ -5,7 +5,6 @@ from pydantic import BaseModel, EmailStr, Field
 class loginForm(BaseModel):
     email: EmailStr
     password: str
-    twoFA: int
 
 
 class registerForm(BaseModel):
