@@ -49,6 +49,7 @@ sbmtLoginDataBtn.addEventListener('click', async () => {
     const loginResponseData = await loginResponse.json();
 
     if (loginResponse.status === 302){
+      loginErrorMsg.innerText = "";
       sbmtLoginDataBtn.innerText = "Credencials Verified ✔️"
       if (loginResponseData.is2FAenabled) {
         emailInput.ariaPlaceholder = email; emailInput.disabled = true; emailInput.classList.add('cursor-not-allwoed')
