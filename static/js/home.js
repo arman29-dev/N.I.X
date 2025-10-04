@@ -105,6 +105,9 @@ async function verify2FA(email, code, endpoint) {
     if (verificationRes.ok) {
       window.location.href = verificationResData.redirectUrl;
     } else {
+      twoFAVerifyBtn.disabled = false;
+      twoFAVerifyBtn.classList.remove('cursor-not-allowed');
+      twoFAVerifyBtn.innerText = "Verify Again"
       loginErrorMsg.innerText = verificationResData.loginError;
     }
   } catch (error) {
