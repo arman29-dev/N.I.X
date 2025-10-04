@@ -60,14 +60,12 @@ async function verifyCode() {
     verifyButton.textContent = 'Verifying...';
 
     try {
-        const { apiUrl, success_url } = API_DATA;
+        const { endpoint, success_url, user_email } = API_DATA;
 
-        const formData = new FormData();
-        formData.append('verification_code', code)
-
-        const response = await fetch(apiUrl, {
+        const response = await fetch(endpoint, {
             method: 'POST',
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: code, email: user_email }),
         });
 
         const data = await response.json();

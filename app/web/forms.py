@@ -14,10 +14,6 @@ class registerForm(BaseModel):
     cnfmPassword: str
 
 
-class twoFactorAuthForm(BaseModel):
-    verification_code: str
-
-
 class passwordResetForm(BaseModel):
     new_pswd: str = Field(min_length=8, max_length=128)
     cnfm_pswd: str

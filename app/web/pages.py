@@ -3,16 +3,16 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.core.auth import get_qrcode, login_required, verify2FAcode
-from app.core.config import templates, limiter
 from app.core.sLogger import security_logger
 from app.core.emailing import send_email
+from app.core.config import templates
 
 from app.models.users import User
 from app.models import get_user_devices
 from app.models import SessionDep, get_user_by_id, register_user, update_user
 
 from . import webApp, get_2FA_uri
-from .forms import registerForm, twoFactorAuthForm, passwordResetForm
+from .forms import registerForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
 from typing import Annotated, Union
@@ -97,35 +97,6 @@ async def setup_2FA(req: Request, uid: str, session: SessionDep):
                 "qr_data": qr_code
             }
         )
-
-@webApp.post('/auth/setup-2FA/{uid}')
-@limiter.limit("3/minute")
-def verify2FA(request: Request, uid: str, data: Annotated[twoFactorAuthForm, Form()], session: SessionDep):
-    code = data.verification_code
-    user = get_user_by_id(uid, session)
-    if user is not None:
-        if verify2FAcode(uid, code, session):
-            request.session[user.uid] = user.email
-
-            email_template = templates.get_template("email/welcome.html")
-            status, msg = send_email(
-                to=user.email,
-                subject="Welcome to N.I.X",
-                body=email_template.render(user=user)
-            )
-            if status is not True:
-                print(f"Email Sent Status: {status}->{msg}")
-
-            return JSONResponse({
-                # 'success': True,
-                'message': '2FA successfully enabled!',
-            }, status_code=200)
-
-
-        return JSONResponse({
-            # 'success': False,
-            'message': 'Invalid verification code',
-        }, status_code=HTTP_400_BAD_REQUEST)
 
 
 # Forgot Password Route

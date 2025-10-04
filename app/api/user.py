@@ -119,6 +119,38 @@ async def send_reset_code(req: Request, email: Annotated[str, Form()], session: 
     return JSONResponse({"endpoint": str(pswd_rst_url)}, status_code=200)
 
 
+@userApi.post('/auth/2FA/setup')
+async def verify2FA(req: Request, session: SessionDep):
+    reqData = await req.json()
+    code = reqData.get('code')
+    email = reqData.get('email')
+
+    user = get_user(email, session)
+    if user is None:
+        return JSONResponse({
+            "message": "User not found!"
+        }, status_code=400)
+
+    if verify2FAcode(user.uid, code, session):
+        req.session[user.uid] = user.email
+
+        email_template = templates.get_template("email/welcome.html")
+        send_email(
+            to=user.email,
+            subject="Welcome to N.I.X",
+            body=email_template.render(user=user)
+        )
+
+        return JSONResponse({
+            'message': '2FA successfully enabled!',
+        }, status_code=200)
+
+
+    return JSONResponse({
+        'message': 'Invalid verification code',
+    }, status_code=401)
+
+
 @webApp.post('/auth/2FA/verify')
 async def web2FAverification(req: Request, session: SessionDep):
     client_ip = req.client.host if req.client else 'unknown'

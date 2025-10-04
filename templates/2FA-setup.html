@@ -58,7 +58,8 @@
     <script>
         const API_DATA = {
             "success_url": "{{ url_for('dashboard', uid=user.uid) }}",
-            "apiUrl": "{{ url_for('setup_2FA', uid=user.uid) }}",
+            "endpoint": "{{ url_for('verify2FA') }}",
+            "user_email": "{{ user.email }}"
         }
     </script>
     <script src="{{ url_for('static', path='js/2FA-setup.js') }}"></script>
