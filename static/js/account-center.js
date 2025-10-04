@@ -25,7 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteAccountBtn = document.getElementById("delete-account-btn");
   const submitBtn = document.getElementById("submit-2fa");
   const cancelBtn = document.getElementById("cancel-2fa");
-  const inputs = modal.querySelectorAll("input");
+  const inputs = modal?.querySelectorAll("input") || [];
+
+  // Handle warning modal (no input fields)
+  if (cancelBtn && inputs.length === 0) {
+    cancelBtn.addEventListener("click", () => {
+      modal.classList.add("hidden");
+    });
+  }
 
   deleteDevicesBtn.addEventListener("click", () => openModal("devices"));
   deleteAccountBtn.addEventListener("click", () => openModal("account"));
@@ -58,17 +65,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function handleSubmit() {
-    submitBtn.disabled = true;
-    submitBtn.classList.add('cursor-not-allowed')
-    submitBtn.textContent = 'Processing...';
-
     const code = Array.from(inputs)
       .map((input) => input.value)
       .join("");
+
+
     if (code.length !== 6) {
       showNotification("Please enter all 6 digits");
       return;
     }
+
+    submitBtn.disabled = true;
+    submitBtn.classList.add('cursor-not-allowed')
+    submitBtn.textContent = 'Processing...';
 
     const endpoint = currentAction === "devices" ? delDeviceUrl : delAccountUrl;
 
