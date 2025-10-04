@@ -161,3 +161,12 @@ input[name="twoFA"][type=number] {
         transform: translateZ(5px) rotateX(2deg) rotateY(-2deg) scale(1);
     }
 }
+/* Arrow animation for pointing to Create Account */
+@keyframes moveLeft {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(-10px);
+    }
+}

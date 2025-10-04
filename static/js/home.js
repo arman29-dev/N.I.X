@@ -26,7 +26,6 @@ const twoFAVerifyBtn = document.getElementById('2fa-verify-btn');
 
 twoFAinput.disabled = true;
 twoFAVerifyBtn.disabled = true;
-twoFAinputDiv.classList.add('hidden');
 
 sbmtLoginDataBtn.addEventListener('click', async () => {
   const email = emailInput.value;
@@ -69,7 +68,21 @@ sbmtLoginDataBtn.addEventListener('click', async () => {
       } else {
         window.location.href = loginResponseData.redirectUrl;
       }
+    } else if (loginResponse.status === 404) {
+      document.getElementById('animated-arrow').classList.remove('hidden');
+
+      sbmtLoginDataBtn.disabled = false;
+      sbmtLoginDataBtn.innerText = "Login";
+      sbmtLoginDataBtn.classList.remove('cursor-not-allowed');
+      sbmtLoginDataBtn.classList.add('hover:scale-105');
+
+      loginErrorMsg.innerText = loginResponseData.loginError;
     } else {
+      sbmtLoginDataBtn.disabled = false;
+      sbmtLoginDataBtn.innerText = "Try Again";
+      sbmtLoginDataBtn.classList.remove('cursor-not-allowed');
+      sbmtLoginDataBtn.classList.add('hover:scale-105');
+
       loginErrorMsg.innerText = loginResponseData.loginError;
     }
   } catch (error) {
