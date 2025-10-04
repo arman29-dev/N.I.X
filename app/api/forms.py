@@ -1,9 +1,10 @@
 from pydantic import BaseModel, EmailStr
 
 
-class loginForm(BaseModel):
+class apiLoginForm(BaseModel):
     email: EmailStr
     password: str
+    twoFA: str
 
 
 class deviceForm(BaseModel):

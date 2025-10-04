@@ -12,9 +12,10 @@ from app.models import SessionDep, get_user, get_user_by_id, register_token, del
 from app.core.sLogger import security_logger
 
 from app.web import webApp
+from app.web.forms import loginForm
 
 from . import userApi, login
-from .forms import loginForm
+from .forms import apiLoginForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
 from typing import Union, Annotated
@@ -65,7 +66,7 @@ async def web_login(request: Request, data: Annotated[loginForm, Form()], sessio
 
 
 @userApi.post("/auth/login")
-async def user_login(login_data: loginForm, session: SessionDep):
+async def user_login(login_data: apiLoginForm, session: SessionDep):
     user = get_user(login_data.email, session)
     if user is None:
         return JSONResponse({'Error': 'User not found'}, status_code=401)
