@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(API.route);
     const openModalBtn = document.getElementById('add-device-btn');
     const closeModalBtn = document.getElementById('close-modal-btn');
     const modal = document.getElementById('device-modal');
@@ -14,12 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeQrModalBtn = document.getElementById('close-qr-modal-btn');
     const closeQrModalFinalBtn = document.getElementById('close-qr-modal-final-btn');
     const qrCodeImage = document.getElementById('qr-code-image');
-
-    console.log('Found elements:', {
-        radioButtons: radioButtons.length,
-        addButton: !!addButton,
-        labels: labels.length
-    });
 
     function openModal() {
         modal.classList.remove('hidden');
@@ -115,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     radioButtons.forEach(radio => {
         radio.addEventListener('change', () => {
-            console.log('Radio changed:', radio.value);
             addButton.disabled = false;
             labels.forEach(label => label.classList.remove('selected'));
             if (radio.checked) {

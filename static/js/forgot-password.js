@@ -30,24 +30,19 @@ document.getElementById("send-code-btn").addEventListener("click", async functio
       throw new Error("Server returned invalid response");
     }
 
-    console.log('Server Response: ' + responseData.error);
-
     if (response.ok) {
-      console.log('success');
       spinner.classList.add("hidden");
       sendCodeText.classList.remove("hidden");
       successMessage.innerText = "Verification code sent to your email";
       successMessage.classList.add("show");
       setTimeout(() => window.location.href = responseData.endpoint, 3000);
     } else {
-      console.log('failed in else');
       spinner.classList.add("hidden");
       sendCodeText.classList.remove("hidden");
       errorMessage.innerText = responseData.error;
       errorMessage.classList.add("show");
     }
   } catch (error) {
-    console.log('failed in catch');
     spinner.classList.add("hidden");
     sendCodeText.classList.remove("hidden");
     errorMessage.innerText = error.message || "An error occurred";
