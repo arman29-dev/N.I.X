@@ -65,10 +65,25 @@ async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(
         if token is None:
             return JSONResponse({'stats': 404, 'msg': 'Token not found'}, status_code=404)
 
-        token.linked_device = str(device_uid)
-        session.add(token)
+        # Create new token for this device if current token is already linked
+        if token.linked_device and token.linked_device != 'xxxxx-xxx-xxx-xxxxx':
+            from uuid import uuid4
+            from datetime import datetime, timedelta
+
+            new_token = Token(
+                uid=uuid4(),
+                owner=user.uid,
+                access_token=token.access_token,  # Reuse same JWT
+                created_at=datetime.now(),
+                expires_at=datetime.now() + timedelta(days=30),
+                linked_device=str(device_uid)
+            )
+            session.add(new_token)
+        else:
+            token.linked_device = str(device_uid)
+            session.add(token)
+
         session.commit()
-        session.refresh(token)
 
     except Exception as E:
         return JSONResponse({'msg': str(E)}, status_code=500)
