@@ -18,7 +18,7 @@ from . import userApi, login
 from .forms import apiLoginForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
-from typing import Union, Annotated
+from typing import Annotated
 from uuid import uuid4
 
 
@@ -181,17 +181,14 @@ async def web2FAverification(req: Request, session: SessionDep):
     }, 200)
 
 
-@userApi.put('/auth/2FA/manage')
+@userApi.get('/auth/2FA/toggle-setting')
 @login_required()
-async def manage_2FA(req: Request, session: SessionDep, action: Union[bool, None], current_user_uid: str|None=None):
+async def toggle2FA(req: Request, session: SessionDep, current_user_uid: str|None=None):
     user = get_user_by_id(str(current_user_uid), session)
     if user is None:
         return JSONResponse({"message": 'User Not found'}, status_code=404)
 
-    if action is None:
-        return JSONResponse({'message': 'Action not defined'}, status_code=400)
-
-    user.is_2FA_enabled = action
+    user.is_2FA_enabled = not user.is_2FA_enabled
     stats, msg = update_user(user, session)
 
     return JSONResponse({'message': msg}, status_code=stats)

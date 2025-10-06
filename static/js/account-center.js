@@ -1,21 +1,21 @@
 let currentAction = null;
 
-const { delDeviceUrl, delAccountUrl, manage2FAUrl, logoutUrl } = API_DATA;
+const { delDeviceUrl, delAccountUrl, toggle2FAUrl, logoutUrl } = API_DATA;
 
-const manage2FABtn = document.getElementById('manage2FABtn');
+const toggle2FABtn = document.getElementById('toggle2FABtn');
 const manage2FAModal = document.getElementById('manage-2fa-modal');
 const cnf2FAdisableBtn = document.getElementById('confirm-2fa-disable')
 const cncl2FAdisableBtn = document.getElementById('cancel-2fa-disable')
 
 cnf2FAdisableBtn.addEventListener("click", () => {
   cnf2FAdisableBtn.textContent = 'Disabling...';
-  exeManage2FA(false);
+  executeToggle();
 });
 
 cncl2FAdisableBtn.addEventListener("click", () => {
   manage2FAModal.classList.add('hidden');
-  manage2FABtn.disabled = false;
-  manage2FABtn.classList.remove('cursor-not-allowed');
+  toggle2FABtn.disabled = false;
+  toggle2FABtn.classList.remove('cursor-not-allowed');
 })
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -128,36 +128,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-async function exeManage2FA(action) {
-  const endpoint = `${manage2FAUrl}?action=${action}`;
-
+async function executeToggle() {
   try {
-    const response = await fetch(endpoint, {
-        method: 'PUT',
+    const response = await fetch(toggle2FAUrl, {
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         },
     });
 
-    const responseData = response.json();
     if (response.ok) {
       location.reload();
-      showNotification(responseData.message, 'success')
     } else {
-      showNotification("Unable to perform the action" || responseData.message)
+      const responseData = response.json();
+      alert(responseData.message || "Unable to perform the action")
     }
   } catch (error) {
-    showNotification(error)
+    alert(error)
   }
 }
 
-function manage2FA(action) {
-  manage2FABtn.disabled = true;
-  manage2FABtn.classList.add('cursor-not-allowed');
-  if (action === true) {
-    manage2FABtn.textContent = "Enabling..."
-    exeManage2FA(action);
-  } else {
+function toggle2FA(currentStatus) {
+  toggle2FABtn.disabled = true;
+  toggle2FABtn.classList.add('cursor-not-allowed');
+  if (currentStatus) {
     manage2FAModal.classList.remove('hidden');
+  } else {
+    toggle2FABtn.textContent = "Enabling..."
+    executeToggle();
   }
 }

@@ -105,7 +105,7 @@
                                                     Enabled
                                                 </span>
                                                 <button class="flex items-center justify-center rounded-md h-10 px-4 bg-[#224949] text-white hover:bg-red-500 transition-colors text-sm font-bold"
-                                                 id="manage2FABtn" type="button" onclick="manage2FA(false)">
+                                                 id="toggle2FABtn" type="button" onclick="toggle2FA(true)">
                                                     Disable
                                                 </button>
                                             {% else %}
@@ -113,7 +113,7 @@
                                                     Disabled
                                                 </span>
                                                 <button class="flex items-center justify-center rounded-md h-10 px-4 bg-[#224949] text-white hover:bg-green-500 transition-colors text-sm font-bold"
-                                                 id="manage2FABtn" type="button" onclick="manage2FA(true)">
+                                                 id="toggle2FABtn" type="button" onclick="toggle2FA(false)">
                                                     Enable
                                                 </button>
                                             {% endif %}
@@ -252,7 +252,7 @@
             const API_DATA = {
                 "delDeviceUrl": "{{ url_for('delete_all_devices') }}",
                 "delAccountUrl": "{{ url_for('delete_account') }}",
-                "manage2FAUrl": "{{ url_for('manage_2FA') }}",
+                "toggle2FAUrl": "{{ url_for('toggle2FA') }}",
                 "logoutUrl": "{{ url_for('logout') }}"
             }
         </script>
