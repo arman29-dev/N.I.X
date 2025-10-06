@@ -1,25 +1,18 @@
-from fastapi import Request, Form, HTTPException
+from fastapi import Request
+from starlette.status import HTTP_302_FOUND
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from starlette.status import HTTP_302_FOUND, HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.core.auth import get_qrcode, login_required, verify2FAcode
+from app.core.auth import get_qrcode, login_required
 from app.core.sLogger import security_logger
-from app.core.emailing import send_email
 from app.core.config import templates
 
-from app.models.users import User
 from app.models import get_user_devices
-from app.models import SessionDep, get_user_by_id, register_user, update_user
+from app.models import SessionDep, get_user_by_id
 
 from . import webApp, get_2FA_uri
-from .forms import registerForm, passwordResetForm
 
-from passlib.hash import pbkdf2_sha256 as secure_password
-from typing import Annotated, Union
-from pyotp import random_base32
-from datetime import datetime
+from typing import Union
 from logging import getLogger
-from uuid import uuid4
 
 
 
@@ -42,38 +35,6 @@ async def home(req: Request):
         "home.html",
         {"request": req}
     )
-
-
-# Register Route
-@webApp.post("/auth/register/")
-async def register(req: Request, data: Annotated[registerForm, Form()], session: SessionDep):
-    client_ip = req.client.host if req.client else 'unknown'
-
-    user = User(
-        uid=str(uuid4()),
-        email=data.email,
-        username=data.username,
-        password=secure_password.hash(data.password),
-        twoFA_secret=random_base32(),
-    )
-
-    status, msg = register_user(user, session)
-    if status == 200:
-        security_logger.info(f"New user registered: {data.email} from IP: {client_ip}")
-        return RedirectResponse(req.url_for('setup_2FA', uid=user.uid), status_code=HTTP_302_FOUND)
-
-    elif status == 500:
-        security_logger.error(f"Registration failed for {data.email}: {msg}",
-            exc_info=True, extra={'client_ip': client_ip}
-        )
-
-        return templates.TemplateResponse(
-            "home.html",
-            {
-                "request": req,
-                "error": msg
-            }
-        )
 
 
 # 2FA Setup Route
@@ -123,50 +84,6 @@ async def password_reset_form(req: Request, uid: str, session: SessionDep, code:
             "code_hash": code
         }
     )
-
-@webApp.post("/account/security/password-reset/{uid}")
-async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], session: SessionDep):
-    user = get_user_by_id(uid, session)
-    if user is None:
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid user")
-
-    # Check if verification_code_hash is provided (forgot password flow)
-    if data.verification_code_hash and data.verification_code_hash.strip() and data.verification_code_hash != 'None':
-        # Forgot password flow - verify email code
-        if user.code_expires_at is None:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="No verification code found. Please request a new one.")
-
-        if user.code_expires_at < datetime.now():
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Verification code has expired. Please request a new one.")
-
-        if not secure_password.verify(str(data.verification_code), str(data.verification_code_hash)):
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-    else:
-        # Account center flow - verify 2FA code
-        if not verify2FAcode(uid, str(data.verification_code), session):
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Invalid 2FA code")
-
-    user.password = secure_password.hash(data.new_pswd)
-    stats, msg = update_user(user, session)
-    if stats == 500:
-        raise HTTPException(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "msg": "Failed to update password",
-                "error": msg
-            }
-        )
-
-    pswd_update_confirm_email_template = templates.get_template("email/passwordUpdateConfirmation.html")
-    email_stats, msg = send_email(
-        to=user.email,
-        subject="N.I.X Password Update Confirmation",
-        body=pswd_update_confirm_email_template.render()
-    )
-    if email_stats is False:
-        print(f"Email Sent Status: {stats}->{msg}")
-
-    return stats
 
 
 # Account Center Route

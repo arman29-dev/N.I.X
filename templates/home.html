@@ -103,15 +103,15 @@
                                     <h2 class="text-3xl font-bold mb-6 text-center" >
                                         Create Account
                                     </h2>
-                                    <form method="post" id="register-form" action="{{ url_for('register') }}" onsubmit="return validatePassword()">
+                                    <div id="register-form">
                                         <div class="space-y-6">
                                             <input
                                                 class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
-                                                placeholder="Email" required="" type="email" name="email"
+                                                id="register-email" placeholder="Email" required="" type="email" name="email"
                                             />
                                             <input
                                                 class="w-full bg-[var(--input-bg)] border-none rounded-md h-12 px-4 placeholder:text-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] transition-all"
-                                                placeholder="Username" required="" type="text" name="username"
+                                                id="username" placeholder="Username" required="" type="text" name="username"
                                             />
                                             <div class="relative">
                                                 <input
@@ -136,16 +136,16 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        <span id="error" class="error-message">{{ error }}</span>
+                                        <span id="register-error-msg" class="error-message"></span>
                                         <div class="mt-8">
                                             <button
                                                 class="w-full bg-[var(--primary-color)] text-[#102323] font-bold py-3 rounded-md hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105"
-                                                type="submit">Register</button>
+                                                id="submit-register-data-btn" type="submit">Register</button>
                                         </div>
                                         <div class="mt-6 text-center text-[var(--placeholder-color)] text-sm" >
                                             <a class="hover:text-[var(--primary-color)] transition" href="#" id="show-login" >Already have an account? Login</a >
                                         </div>
-                                    </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -157,6 +157,7 @@
         <script>
           const API_ENDPOINT = {
             "login": "{{ url_for('web_login') }}",
+            "register": "{{ url_for('web_register') }}"
           }
         </script>
         <script src="{{ url_for('static', path='js/home.js') }}"></script>

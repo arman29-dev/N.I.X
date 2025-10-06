@@ -15,10 +15,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 const loginErrorMsg = document.getElementById('login-error-msg');
+const registerErrorMsg = document.getElementById("register-error-msg");
 
 const emailInput = document.getElementById('login-email');
 const pswdInput = document.getElementById('login-password');
 const sbmtLoginDataBtn = document.getElementById('submit-login-data-btn');
+
+const rgstrEmailInput = document.getElementById('register-email');
+const usernameInput = document.getElementById('username');
+const rgstRpswdInput = document.getElementById("register-password");
+const cnfPswdInput = document.getElementById("confirm-password");
+const sbmtRgstrDataBtn = document.getElementById('submit-register-data-btn')
 
 const twoFAinputDiv = document.getElementById('2fa-input-div');
 const twoFAinput = document.getElementById('2fa-input');
@@ -92,6 +99,54 @@ sbmtLoginDataBtn.addEventListener('click', async () => {
 })
 
 
+sbmtRgstrDataBtn.addEventListener('click', async () => {
+
+  const rgstrEmail = rgstrEmailInput.value;
+  const username = usernameInput.value;
+  const rgstrPswd = rgstRpswdInput.value;
+  const cnfPswd = cnfPswdInput.value;
+  const rgstrForm = new FormData();
+
+  if (validatePassword(rgstrPswd, cnfPswd)) {
+    rgstrForm.append('email', rgstrEmail);
+    rgstrForm.append('username', username);
+    rgstrForm.append('password', rgstrPswd);
+    rgstrForm.append('cnfmPassword', cnfPswd);
+
+    try{
+      sbmtRgstrDataBtn.disabled = true;
+      sbmtRgstrDataBtn.innerText = "Registering..."
+      sbmtRgstrDataBtn.classList.add('cursor-not-allowed');
+      sbmtRgstrDataBtn.classList.remove('hover:scale-105');
+
+      const registerRes = await fetch(API_ENDPOINT.register, {
+        method: "POST",
+        body: rgstrForm
+      })
+
+      const registerResData = await registerRes.json();
+
+      if (registerRes.status === 200){
+        window.location.href = registerResData.redirectUrl;
+      } else {
+        sbmtRgstrDataBtn.disabled = false;
+        sbmtRgstrDataBtn.innerText = "Try Again"
+        sbmtRgstrDataBtn.classList.remove('cursor-not-allowed');
+        sbmtRgstrDataBtn.classList.add('hover:scale-105');
+        registerErrorMsg.innerText = registerResData.error || "Unable to register you!";
+      }
+    } catch (error) {
+      sbmtRgstrDataBtn.disabled = false;
+      sbmtRgstrDataBtn.innerText = "Try Again"
+      sbmtRgstrDataBtn.classList.remove('cursor-not-allowed');
+      sbmtRgstrDataBtn.classList.add('hover:scale-105');
+      registerErrorMsg.innerText = error;
+    }
+  }
+
+})
+
+
 async function verify2FA(email, code, endpoint) {
   try {
     const verificationRes = await fetch(endpoint, {
@@ -116,42 +171,38 @@ async function verify2FA(email, code, endpoint) {
 }
 
 
-function validatePassword(){
-  var password = document.getElementById("register-password").value;
-  var confirmPassword = document.getElementById("confirm-password").value;
-  var error = document.getElementById("error");
-
-  if (password.length < 8) {
-    error.textContent = "Password must be at least 8 characters long.";
+function validatePassword(pswd, cnfPswd){
+  if (pswd.length < 8) {
+    registerErrorMsg.textContent = "Password must be at least 8 characters long.";
     return false;
   }
 
-  if (!/(?=.*[A-Z])/.test(password)) {
-    error.textContent = "Password must contain at least one uppercase letter.";
+  if (!/(?=.*[A-Z])/.test(pswd)) {
+    registerErrorMsg.textContent = "Password must contain at least one uppercase letter.";
     return false;
   }
 
-  if (!/(?=.*[a-z])/.test(password)) {
-    error.textContent = "Password must contain at least one lowercase letter.";
+  if (!/(?=.*[a-z])/.test(pswd)) {
+    registerErrorMsg.textContent = "Password must contain at least one lowercase letter.";
     return false;
   }
 
-  if (!/(?=.*[0-9])/.test(password)) {
-    error.textContent = "Password must contain at least one number.";
+  if (!/(?=.*[0-9])/.test(pswd)) {
+    registerErrorMsg.textContent = "Password must contain at least one number.";
     return false;
   }
 
-  if (!/(?=.*[-#?!@$ %^&*_])/.test(password)) {
-    error.textContent = "Password must contain at least one special character.";
+  if (!/(?=.*[-#?!@$ %^&*_])/.test(pswd)) {
+    registerErrorMsg.textContent = "Password must contain at least one special character.";
     return false;
   }
 
-  if (password !== confirmPassword) {
-    error.textContent = "Passwords do not match.";
+  if (pswd !== cnfPswd) {
+    registerErrorMsg.textContent = "Passwords do not match.";
     return false;
   }
 
-  error.textContent = "";
+  registerErrorMsg.textContent = "";
   return true;
 }
 

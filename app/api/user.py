@@ -6,18 +6,19 @@ from app.core.jwt_utility import generate_token
 from app.core.config import templates, limiter
 from app.core.emailing import send_email
 
-from app.models.users import Token
-from app.models import SessionDep, get_user, get_user_by_id, register_token, delete_user, update_user
+from app.models.users import User, Token
+from app.models import SessionDep, get_user, get_user_by_id, register_user, register_token, delete_user, update_user
 
 from app.core.sLogger import security_logger
 
 from app.web import webApp
-from app.web.forms import loginForm
 
 from . import userApi, login
-from .forms import apiLoginForm
+from .forms import apiLoginForm, loginForm, registerForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
+from pyotp import random_base32
+from datetime import datetime
 from typing import Annotated
 from uuid import uuid4
 
@@ -63,6 +64,88 @@ async def web_login(request: Request, data: Annotated[loginForm, Form()], sessio
             "is2FAenabled": twoFA_enable_stats,
             "redirectUrl": str(dashboardUrl)
         }, status_code=302)
+
+
+# Register Route
+@webApp.post("/auth/register/")
+async def web_register(req: Request, data: Annotated[registerForm, Form()], session: SessionDep):
+    client_ip = req.client.host if req.client else 'unknown'
+
+    user = User(
+        uid=str(uuid4()),
+        email=data.email,
+        username=data.username,
+        password=secure_password.hash(data.password),
+        twoFA_secret=random_base32(),
+    )
+
+    status, msg = register_user(user, session)
+    if status == 200:
+        security_logger.info(f"New user registered: {data.email} from IP: {client_ip}")
+        return JSONResponse({
+            "redirectUrl": str(req.url_for('setup_2FA', uid=user.uid))
+        }, status_code=status)
+
+    elif status == 500:
+        security_logger.error(f"Registration failed for {data.email}: {msg}",
+            exc_info=True, extra={'client_ip': client_ip}
+        )
+
+        return JSONResponse({
+                "error": msg
+            }, status_code=status)
+
+
+@webApp.put("/account/security/password-reset/{uid}")
+async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], session: SessionDep):
+    user = get_user_by_id(uid, session)
+    if user is None:
+        return JSONResponse({
+            "msg": "Account not found"
+        }, status_code=404)
+
+    # Check if verification_code_hash is provided (forgot password flow)
+    if data.verification_code_hash and data.verification_code_hash.strip() and data.verification_code_hash != 'None':
+        if user.code_expires_at is None:
+            return JSONResponse({
+                "msg": "No verification code found. Please request a new one."
+            }, status_code=400)
+
+        if user.code_expires_at < datetime.now():
+            return JSONResponse({
+                "msg": "Verification code has expired. Please request a new one."
+            }, status_code=400)
+
+        if not secure_password.verify(str(data.verification_code), str(data.verification_code_hash)):
+            return JSONResponse({
+                "msg": "Invalid verification code"
+            }, status_code=400)
+    else:
+        if not verify2FAcode(uid, str(data.verification_code), session):
+            return JSONResponse({
+                "msg": "Invalid 2FA code"
+            }, status_code=400)
+
+    user.password = secure_password.hash(data.new_pswd)
+    stats, msg = update_user(user, session)
+    if stats == 500:
+        return JSONResponse({
+            "msg": "Failed to update password",
+            "error": msg
+        }, status_code=stats)
+
+    pswd_update_confirm_email_template = templates.get_template("email/passwordUpdateConfirmation.html")
+    email_stats, msg = send_email(
+        to=user.email,
+        subject="N.I.X Password Update Confirmation",
+        body=pswd_update_confirm_email_template.render()
+    )
+    if email_stats is False:
+        print(f"Email Sent Status: {stats}->{msg}")
+
+    return JSONResponse({
+        "msg": "Success"
+    }, status_code=200)
 
 
 @userApi.post("/auth/login")
