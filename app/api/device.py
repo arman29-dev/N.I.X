@@ -100,6 +100,33 @@ async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(
     )
 
 
+@deviceApi.get('/manage/toggle-status')
+async def toggleStatus(uid: str, session: SessionDep, user=Depends(check_access)):
+    if user is None:
+        return JSONResponse({
+            "msg": "User not Found!"
+        }, status_code=404)
+
+    statement = select(Device).where(Device.owner == user.uid, Device.uid == UUID(uid))
+    device = session.exec(statement).first()
+
+    if device is None:
+        return JSONResponse({
+            "msg": "Device not Found!"
+        }, status_code=404)
+
+    device.is_active = not device.is_active
+
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+
+    return JSONResponse({
+        "msg": "Status updated!",
+        "device_status": device.is_active
+    }, status_code=200)
+
+
 @deviceApi.post('/manage/logout')
 async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, user=Depends(check_access)):
     if delete_info.access_token_uid and delete_info.device_uid is not None:
