@@ -174,19 +174,6 @@ def get_device(device_uid: str, owner_uid: str, session: SessionDep) -> Device|N
         raise
 
 
-def update_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500], str]:
-    try:
-        session.add(device)
-        session.commit()
-        session.refresh(device)
-        return 200, "Device successfully updated"
-
-    except Exception as E:
-        session.rollback()
-        logger.error(f"Database error while updating device {device.uid}: {E}", exc_info=True)
-        return 500, str(E)
-
-
 def delete_token(user_id: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
     try:
         statement = select(Token).where(Token.owner == user_id)
