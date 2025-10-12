@@ -1,9 +1,9 @@
-from fastapi import Request, Form, Depends
+from fastapi import Request, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from app.core.config import SECRET_KEY
-from app.core.auth import login_required, check_access, get_qrcode, verify2FAcode
+from app.core.auth import check_access, get_qrcode, verify2FAcode
 
 from app.models import SessionDep, delete_device, delete_device_registered_token, delete_token, get_device, get_user_access_token, register_device, get_user_devices
 from app.models.devices import Device
@@ -13,14 +13,12 @@ from . import deviceApi
 from .forms import deleteDeviceForm, deviceForm
 
 from uuid import UUID, uuid4
-from typing import Annotated
 
 
 
 @deviceApi.post("/util/generate-qr")
-@login_required()
-async def show_device_qr(req: Request, device_type: Annotated[str, Form()], session: SessionDep, current_user_uid: str|None=None):
-    if current_user_uid is None:
+async def show_device_qr(req: Request, session: SessionDep, user=Depends(check_access)):
+    if user is None:
         return JSONResponse(
             {
                 'success': False,
@@ -28,8 +26,10 @@ async def show_device_qr(req: Request, device_type: Annotated[str, Form()], sess
             }, status_code=401
         )
 
+    data = await req.json()
+    device_type = data.get('device_type')
     if device_type == "smartphone":
-        user_access_token = get_user_access_token(current_user_uid, session)
+        user_access_token = get_user_access_token(user.uid, session)
         if user_access_token is None:
             return JSONResponse({
                 'success': False,
@@ -145,24 +145,23 @@ async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, 
 
 
 @deviceApi.delete('/manage/delete-all')
-@login_required()
-async def delete_all_devices(req: Request, session: SessionDep, current_user_uid: str|None=None):
+async def delete_all_devices(req: Request, session: SessionDep, user=Depends(check_access)):
     data = await req.json()
     twofa_code = data.get('twofa_code')
 
-    if current_user_uid is None:
+    if user is None:
         return JSONResponse({'message': 'Authentication Failure!'}, status_code=401)
 
-    if not verify2FAcode(current_user_uid, twofa_code, session):
+    if not verify2FAcode(user.uid, twofa_code, session):
         return JSONResponse({'message': 'Invalid 2FA code'}, status_code=401)
 
-    devices = get_user_devices(current_user_uid, session)
+    devices = get_user_devices(user.uid, session)
     if devices is None:
         return JSONResponse({'message': 'Unable to fetch devices fot this action!'}, status_code=500)
 
     for device in devices:
-        delete_device(str(device.uid), current_user_uid, session)
-        delete_token(current_user_uid, session)
+        delete_device(str(device.uid), user.uid, session)
+        delete_token(user.uid, session)
 
 
     return JSONResponse({'message': 'All devices deleted successfully'}, status_code=200)

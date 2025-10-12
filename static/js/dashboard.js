@@ -56,12 +56,14 @@ document.addEventListener('DOMContentLoaded', () => {
         addButton.textContent = 'Adding...';
 
         try {
-            const formData = new FormData();
-            formData.append('device_type', selectedDevice.value);
-
+            const token = getCookie('authToken');
             const response = await fetch(API.route, {
                 method: 'POST',
-                body: formData
+                headers: {
+                  "Content-Type": "application/json",
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ device_type: selectedDevice.value }),
             });
 
             const data = await response.json();
@@ -116,3 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}

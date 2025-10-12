@@ -12,6 +12,7 @@ from app.models import SessionDep, get_user_by_id, get_user, get_session, update
 from datetime import timedelta, datetime
 from sqlmodel import Session
 from base64 import b64encode
+from typing import Optional
 from functools import wraps
 from secrets import choice
 from qrcode import QRCode
@@ -21,14 +22,23 @@ from json import dumps
 
 
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-error if no header
 
 
-def check_access(credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: Session = Depends(get_session)) -> User|None:
-    token = credentials.credentials
+def check_access(req: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: Session = Depends(get_session)) -> User:
+
+    token = None
+
+    if credentials:
+        token = credentials.credentials
+    else:
+        token = req.cookies.get('authToken')
+
+    if not token:
+        raise HTTPException(status_code=401, detail="No authentication token provided")
+
     payload = verify_token(token)
-
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 

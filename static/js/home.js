@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+function setCookie(name, value, days = 30) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=None; Secure`;
+}
+
 const loginErrorMsg = document.getElementById('login-error-msg');
 const registerErrorMsg = document.getElementById("register-error-msg");
 
@@ -74,6 +80,7 @@ sbmtLoginDataBtn.addEventListener('click', async () => {
           verify2FA(email, twoFAinput.value, loginResponseData.twoFAverificationEndpoint);
         })
       } else {
+        loginResponseData.authToken? setCookie('authToken', loginResponseData.authToken, 30) : null;
         window.location.href = loginResponseData.redirectUrl;
       }
     } else if (loginResponse.status === 404) {
@@ -158,6 +165,7 @@ async function verify2FA(email, code, endpoint) {
     const verificationResData = await verificationRes.json();
 
     if (verificationRes.ok) {
+      verificationResData.authToken? setCookie('authToken', verificationResData.authToken, 30) : null;
       window.location.href = verificationResData.redirectUrl;
     } else {
       twoFAVerifyBtn.disabled = false;

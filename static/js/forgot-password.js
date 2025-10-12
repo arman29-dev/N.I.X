@@ -15,12 +15,10 @@ document.getElementById("send-code-btn").addEventListener("click", async functio
   sendCodeBtn.classList.add('cursor-not-allowed');
 
   try {
-    const formData = new FormData();
-    formData.append('email', emailInputField.value);
-
     const response = await fetch(API.endpoint, {
       method: "POST",
-      body: formData
+      headers: { "Content-Type": "application/json", },
+      body: JSON.stringify({ email: emailInputField.value })
     })
 
     let responseData;

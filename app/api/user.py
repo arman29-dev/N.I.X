@@ -1,7 +1,7 @@
-from fastapi import Request, Form
+from fastapi import Request, Form, Depends
 from fastapi.responses import JSONResponse
 
-from app.core.auth import login_required, verify2FAcode, generate_verification_code
+from app.core.auth import check_access, verify2FAcode, generate_verification_code
 from app.core.jwt_utility import generate_token
 from app.core.config import templates, limiter
 from app.core.emailing import send_email
@@ -17,8 +17,8 @@ from . import userApi, login
 from .forms import apiLoginForm, loginForm, registerForm, passwordResetForm
 
 from passlib.hash import pbkdf2_sha256 as secure_password
+from datetime import datetime, timedelta
 from pyotp import random_base32
-from datetime import datetime
 from typing import Annotated
 from uuid import uuid4
 
@@ -60,9 +60,15 @@ async def web_login(request: Request, data: Annotated[loginForm, Form()], sessio
     else:
         security_logger.info(f"Successful login for: {data.email} from IP: {client_ip}")
         request.session[user.uid] = data.email
+        jwt = generate_token({
+            'sub': data.email, 'uid': user.uid,
+            'exp': datetime.now() + timedelta(days=30)
+        })
+
         return JSONResponse({
             "is2FAenabled": twoFA_enable_stats,
-            "redirectUrl": str(dashboardUrl)
+            "redirectUrl": str(dashboardUrl),
+            "authToken": jwt,
         }, status_code=302)
 
 
@@ -176,7 +182,9 @@ async def user_login(login_data: apiLoginForm, session: SessionDep):
 
 
 @userApi.post("/account/security/forgot-password")
-async def send_reset_code(req: Request, email: Annotated[str, Form()], session: SessionDep):
+async def send_reset_code(req: Request, session: SessionDep):
+    data = await req.json()
+    email = data.get('email')
     user = get_user(email, session)
     if user is None:
         return JSONResponse({
@@ -259,15 +267,20 @@ async def web2FAverification(req: Request, session: SessionDep):
     security_logger.info(f"Successful login for: {email} from IP: {client_ip}")
     req.session[user.uid] = email
 
+    jwt = generate_token({
+        'sub': email, 'uid': user.uid,
+        'exp': datetime.now() + timedelta(days=30)
+    })
+
     return JSONResponse({
-        "redirectUrl": str(req.url_for('dashboard', uid=user.uid))
+        "redirectUrl": str(req.url_for('dashboard', uid=user.uid)),
+        "authToken": jwt,
     }, 200)
 
 
 @userApi.get('/auth/2FA/toggle-setting')
-@login_required()
-async def toggle2FA(req: Request, session: SessionDep, current_user_uid: str|None=None):
-    user = get_user_by_id(str(current_user_uid), session)
+async def toggle2FA(session: SessionDep, user=Depends(check_access)):
+    user = get_user_by_id(str(user.uid), session)
     if user is None:
         return JSONResponse({"message": 'User Not found'}, status_code=404)
 
@@ -278,22 +291,21 @@ async def toggle2FA(req: Request, session: SessionDep, current_user_uid: str|Non
 
 
 @userApi.delete('/account/manage/delete-account')
-@login_required()
-async def delete_account(req: Request, session: SessionDep, current_user_uid: str|None=None):
+async def delete_account(req: Request, session: SessionDep, user=Depends(check_access)):
     data = await req.json()
     twofa_code = data.get('twofa_code')
 
-    if current_user_uid is None:
+    if user is None:
         return JSONResponse({'message': 'Authentication Failure!'}, status_code=401)
 
-    if not verify2FAcode(current_user_uid, twofa_code, session):
+    if not verify2FAcode(user, twofa_code, session):
         return JSONResponse({'message': 'Invalid 2FA code'}, status_code=401)
 
-    user = get_user_by_id(current_user_uid, session)
+    user = get_user_by_id(user, session)
     if user is None:
         return JSONResponse({'message': 'User not found'}, status_code=404)
 
-    stats, msg = delete_user(current_user_uid, session)
+    stats, msg = delete_user(user.uid, session)
     if stats == 200:
         email_template = templates.get_template("email/accountDeletion.html")
         send_email(

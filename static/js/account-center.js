@@ -18,6 +18,21 @@ cncl2FAdisableBtn.addEventListener("click", () => {
   toggle2FABtn.classList.remove('cursor-not-allowed');
 })
 
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const modal = document.getElementById("twofa-modal");
@@ -82,9 +97,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const endpoint = currentAction === "devices" ? delDeviceUrl : delAccountUrl;
 
     try {
+      const token = getCookie('authToken');
       const response = await fetch(endpoint, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ twofa_code: code }),
       });
 
@@ -130,10 +149,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function executeToggle() {
   try {
+    const token = getCookie('authToken')
     const response = await fetch(toggle2FAUrl, {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
     });
 
