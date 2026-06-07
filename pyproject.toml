@@ -3,7 +3,7 @@ name = "n-i-x"
 version = "0.1.0"
 description = "dependencies required for this project."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.116.2",
     "fastapi-csrf-protect>=1.0.6",
@@ -20,7 +20,8 @@ dependencies = [
     "slowapi>=0.1.9",
     "sqlmodel>=0.0.24",
     "starlette-session>=0.4.3",
-    "uvicorn>=0.35.0",
+    "uvicorn[standard]>=0.35.0",
+    "websockets>=16.0",
 ]
 
 [dependency-groups]

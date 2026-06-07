@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Command Request - Admin</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background-color: #0f172a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 90%;
+            background-color: #1e293b;
+            border-radius: 8px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            border: 1px solid #334155;
+        }
+        .header-icon {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            background-color: #f59e0b;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 4px 16px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .card {
+            background-color: #334155;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #475569;
+        }
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+            font-size: 16px;
+            text-align: center;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #475569;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .value {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+            max-width: 60%;
+            word-break: break-all;
+            text-align: right;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th {
+            background-color: #475569;
+            color: #f1f5f9;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        td {
+            color: #e2e8f0;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #475569;
+        }
+        .active-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .dot-green { background-color: #10b981; }
+        .dot-red { background-color: #ef4444; }
+        .footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #94a3b8;
+            text-align: center;
+        }
+        .footer p { margin: 5px 0; color: #94a3b8; }
+        @media (max-width: 480px) {
+            .container { padding: 25px; }
+            h1 { font-size: 24px; }
+            .row { flex-direction: column; gap: 4px; }
+            .value { text-align: left; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-icon">
+            <svg width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="64" height="40" rx="8" fill="#3b82f6"/>
+                <rect x="2" y="2" width="60" height="36" rx="6" fill="#1e40af"/>
+                <text x="32" y="26" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">N.I.X</text>
+            </svg>
+        </div>
+
+        <h1>New Command Request</h1>
+        <div style="text-align: center;">
+            <span class="badge">{{ cmd_status | upper }}</span>
+        </div>
+
+        <div class="card">
+            <h3>User Details</h3>
+            <div class="row">
+                <span class="label">Email</span>
+                <span class="value">{{ user_email }}</span>
+            </div>
+            <div class="row">
+                <span class="label">User ID</span>
+                <span class="value">{{ user_id }}</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Command Request</h3>
+            <div class="row">
+                <span class="label">Command</span>
+                <span class="value">/{{ cmd_name }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Description</span>
+                <span class="value">{{ cmd_description }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Submitted</span>
+                <span class="value">{{ submitted_at }}</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>User Devices ({{ devices | length }})</h3>
+            {% if devices %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>IP</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in devices %}
+                    <tr>
+                        <td>{{ d.name or 'Unnamed' }}</td>
+                        <td>{{ d.type }}</td>
+                        <td>{{ d.ip }}</td>
+                        <td>
+                            <span class="active-dot {% if d.is_active %}dot-green{% else %}dot-red{% endif %}"></span>
+                            {{ 'Active' if d.is_active else 'Inactive' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #94a3b8; text-align: center; font-size: 14px;">No devices registered for this user.</p>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <p>Review and respond to this request from the N.I.X dashboard.</p>
+            <p>— N.I.X System Admin</p>
+        </div>
+    </div>
+</body>
+</html>

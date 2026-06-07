@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Request Received</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background-color: #0f172a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 90%;
+            background-color: #1e293b;
+            border-radius: 8px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .header-icon {
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #f59e0b;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 4px 16px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        .info-card {
+            background-color: #334155;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #475569;
+            text-align: left;
+        }
+        .info-card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+            font-size: 16px;
+            text-align: center;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #475569;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .info-value {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+            max-width: 60%;
+            word-break: break-all;
+            text-align: right;
+        }
+        .review-notice {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 25px 0;
+        }
+        .review-notice h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .review-notice p {
+            margin: 0;
+            font-size: 15px;
+            color: #e2e8f0;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #94a3b8;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 25px; }
+            h1 { font-size: 24px; }
+            .info-row { flex-direction: column; gap: 4px; }
+            .info-value { text-align: left; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg class="header-icon" width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="40" rx="8" fill="#3b82f6"/>
+            <rect x="2" y="2" width="60" height="36" rx="6" fill="#1e40af"/>
+            <text x="32" y="26" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">N.I.X</text>
+        </svg>
+
+        <h1>Command Request Received</h1>
+        <div class="status-badge">{{ cmd_status | upper }}</div>
+
+        <div class="info-card">
+            <h3>Request Details</h3>
+            <div class="info-row">
+                <span class="info-label">Command</span>
+                <span class="info-value">/{{ cmd_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Description</span>
+                <span class="info-value">{{ cmd_description }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Submitted</span>
+                <span class="info-value">{{ submitted_at }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">User ID</span>
+                <span class="info-value">{{ user_id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user_email }}</span>
+            </div>
+        </div>
+
+        <div class="review-notice">
+            <h3>Review Period</h3>
+            <p>Your request will be reviewed within 1 week. We'll notify you once a decision is made.</p>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for helping improve N.I.X!</p>
+            <p>— N.I.X System</p>
+        </div>
+    </div>
+</body>
+</html>

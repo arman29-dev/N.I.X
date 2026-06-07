@@ -39,17 +39,6 @@
   visibility: visible;
   opacity: 1;
 }
-.group .device-menu {
-    visibility: hidden;
-    opacity: 0;
-    transform: scale(0.95);
-    transition: all 0.2s ease-out;
-}
-.group:focus-within .device-menu {
-    visibility: visible;
-    opacity: 1;
-    transform: scale(1);
-}
 .menu-item {
     position: relative;
 }

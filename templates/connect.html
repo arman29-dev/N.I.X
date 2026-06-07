@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+        <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+        <link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght@400;500;700;900&amp;family=Space+Grotesk%3Awght@400;500;700" onload="this.rel='stylesheet'" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+        <link rel="icon" type="image/png" href="{{ url_for('static', path='images/favicon.ico') }}">
+
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+        <title>N.I.X-CMD Line</title>
+    </head>
+    <body class="bg-[#101E1E] text-white" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <div class="relative flex size-full min-h-screen flex-col dark group/design-root overflow-x-hidden">
+            <div class="layout-container flex h-full grow flex-col">
+                <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#2A3C3C] px-10 py-4">
+                    <div class="flex items-center gap-3 text-white">
+                        <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            <path d="M2 7L12 12L22 7" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            <path d="M12 22V12" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                        </svg>
+                        <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-[#3df5f5]">N.I.X</h2>
+                        <div id="ws-status" class="size-2 rounded-full bg-red-500" title="WS Disconnected"></div>
+                    </div>
+                    <div class="group relative">
+                        <button class="relative flex size-10 items-center justify-center rounded-full border-2 border-transparent transition-all duration-300 hover:border-[#05cdff]">
+                            <div class="absolute inset-0 rounded-full animate-pulse-on-hover"></div>
+                            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            </svg>
+                        </button>
+                        <div class="tooltip invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute right-0 top-full mt-2 w-48 rounded-md bg-[#182C2C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 transition-opacity duration-300 ease-in-out">
+                            <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('dashboard', uid=user.uid) }}">Dashboard</a>
+                            <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('account_center', uid=user.uid) }}">Account</a>
+                            <a class="block px-4 py-2 text-sm text-red-400 transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('logout') }}">Logout</a>
+                        </div>
+                    </div>
+                </header>
+                <div class="px-4 py-10 sm:px-6 lg:px-8">
+                    <div class="mx-auto max-w-5xl">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                            <h1 class="text-3xl font-bold leading-tight tracking-tight">
+                                CMD Line
+                            </h1>
+                            <button id="request-cmd-btn" class="flex items-center gap-1.5 rounded-md bg-[#182C2C] border border-[#2A3C3C] px-3 py-1.5 text-sm text-gray-300 hover:border-[#3df5f5] hover:text-white transition-all duration-200">
+                                <span class="material-symbols-outlined text-base">add</span>
+                                <span>New Command</span>
+                            </button>
+                        </div>
+                        <div class="rounded-lg bg-[#0a1a1a] border border-[#2A3C3C] p-4">
+                            <div id="terminal-output" class="mb-4 font-mono text-sm space-y-1 overflow-y-auto" style="min-height: 300px; max-height: 500px;">
+                                <div class="text-gray-400">N.I.X CMD Interface v1.0</div>
+                                <div class="text-gray-400">Type a command and press Enter.</div>
+                                <div class="text-gray-400">&nbsp;</div>
+                            </div>
+                            <div id="cmd-prefix-warning" class="hidden mb-2 flex items-center gap-1 px-1 text-orange-400 text-xs font-mono">
+                                <span class="material-symbols-outlined text-sm">warning</span>
+                                Prefix commands with '/'
+                            </div>
+                            <div class="flex items-center gap-2 border-t border-[#2A3C3C] pt-3">
+                                <span class="text-[#3df5f5] font-mono text-sm">$</span>
+                                <input id="cmd-input" type="text" class="flex-1 bg-transparent border-none outline-none text-white font-mono text-sm placeholder-gray-500" placeholder="Enter command..." autofocus/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const USER = {
+                "uid": "{{ user.uid }}",
+                "ws_url": "{{ url_for('events_ws', user_id=user.uid) }}"
+            };
+        </script>
+        <script src="{{ url_for('static', path='js/connect.js') }}"></script>
+
+        <!-- Request Command Modal -->
+        <div id="cmd-request-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+            <div class="w-full max-w-md rounded-lg bg-[#182C2C] p-6 shadow-xl border border-[#2A3C3C]">
+                <h2 class="text-lg font-bold mb-4">Request New Command</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-gray-400 mb-1 block">Command</label>
+                        <div class="flex items-center rounded-md bg-[#101E1E] border border-[#2A3C3C]">
+                            <span class="px-3 text-[#3df5f5] font-mono text-sm">/</span>
+                            <input id="cmd-name-input" type="text" class="flex-1 bg-transparent border-none outline-none text-white font-mono text-sm py-2 pr-3 placeholder-gray-500" placeholder="command name" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400 mb-1 block">Description</label>
+                        <textarea id="cmd-desc-input" rows="3" class="w-full rounded-md bg-[#101E1E] border border-[#2A3C3C] text-white text-sm p-3 placeholder-gray-500 outline-none resize-none" placeholder="What should this command do?"></textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="cmd-request-cancel" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+                    <button id="cmd-request-submit" class="px-4 py-2 text-sm font-bold rounded-md bg-[#3df5f5] text-[#102323] hover:bg-opacity-80 transition-all">Submit Request</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div id="cmd-notification" class="fixed top-4 right-4 z-50 hidden px-4 py-2 rounded shadow-lg text-white bg-green-500">
+            <span id="cmd-notification-message"></span>
+        </div>
+    </body>
+</html>

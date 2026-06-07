@@ -10,4 +10,5 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
         reload_dirs=reload_dirs,
+        forwarded_allow_ips="*",
     )

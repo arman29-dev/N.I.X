@@ -1,4 +1,5 @@
-from fastapi import Request, Form, Depends
+import re
+from fastapi import BackgroundTasks, Request, Query, Form, Depends
 from fastapi.responses import JSONResponse
 
 from app.core.auth import check_access, verify2FAcode, generate_verification_code
@@ -7,7 +8,7 @@ from app.core.config import templates, limiter
 from app.core.emailing import send_email
 
 from app.models.users import User, Token
-from app.models import SessionDep, get_user, get_user_by_id, register_user, register_token, delete_user, update_user
+from app.models import SessionDep, get_user, get_user_by_id, get_user_devices, register_user, register_token, delete_user, update_user
 
 from app.core.sLogger import security_logger
 
@@ -15,6 +16,7 @@ from app.web import webApp
 
 from . import userApi, login
 from .forms import apiLoginForm, loginForm, registerForm, passwordResetForm
+from .comms import manager
 
 from passlib.hash import pbkdf2_sha256 as secure_password
 from datetime import datetime, timedelta
@@ -103,7 +105,7 @@ async def web_register(req: Request, data: Annotated[registerForm, Form()], sess
 
 
 @webApp.put("/account/security/password-reset/{uid}")
-async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], session: SessionDep):
+async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], background_tasks: BackgroundTasks, session: SessionDep):
     user = get_user_by_id(uid, session)
     if user is None:
         return JSONResponse({
@@ -140,14 +142,13 @@ async def password_reset(uid: str, data: Annotated[passwordResetForm, Form()], s
             "error": msg
         }, status_code=stats)
 
-    pswd_update_confirm_email_template = templates.get_template("email/passwordUpdateConfirmation.html")
-    email_stats, msg = send_email(
-        to=user.email,
+    email_body = templates.get_template("email/passwordUpdateConfirmation.html").render()
+    background_tasks.add_task(
+        send_email,
+        to=user.notification_email or user.email,
         subject="N.I.X Password Update Confirmation",
-        body=pswd_update_confirm_email_template.render()
+        body=email_body,
     )
-    if email_stats is False:
-        print(f"Email Sent Status: {stats}->{msg}")
 
     return JSONResponse({
         "msg": "Success"
@@ -182,7 +183,7 @@ async def user_login(login_data: apiLoginForm, session: SessionDep):
 
 
 @userApi.post("/account/security/forgot-password")
-async def send_reset_code(req: Request, session: SessionDep):
+async def send_reset_code(req: Request, background_tasks: BackgroundTasks, session: SessionDep):
     data = await req.json()
     email = data.get('email')
     user = get_user(email, session)
@@ -197,22 +198,20 @@ async def send_reset_code(req: Request, session: SessionDep):
             "error": "Failed to generate verification code. Please try again."
         }, status_code=500)
 
-    pswdreset_email_template = templates.get_template("email/passwordResetCode.html")
-    email_stats, msg = send_email(
-        to=email,
+    email_body = templates.get_template("email/passwordResetCode.html").render(code=code)
+    background_tasks.add_task(
+        send_email,
+        to=user.notification_email or email,
         subject="N.I.X Password Reset",
-        body=pswdreset_email_template.render(code=code)
+        body=email_body,
     )
-
-    if email_stats is False:
-        return JSONResponse({"error": f"Failed to send email: {msg}"}, status_code=500)
 
     pswd_rst_url = req.url_for('password_reset_form', uid=user.uid).include_query_params(code=secure_password.hash(code))
     return JSONResponse({"endpoint": str(pswd_rst_url)}, status_code=200)
 
 
 @userApi.post('/auth/2FA/setup')
-async def verify2FA(req: Request, session: SessionDep):
+async def verify2FA(req: Request, background_tasks: BackgroundTasks, session: SessionDep):
     reqData = await req.json()
     code = reqData.get('code')
     email = reqData.get('email')
@@ -226,11 +225,12 @@ async def verify2FA(req: Request, session: SessionDep):
     if verify2FAcode(user.uid, code, session):
         req.session[user.uid] = user.email
 
-        email_template = templates.get_template("email/welcome.html")
-        send_email(
-            to=user.email,
+        email_body = templates.get_template("email/welcome.html").render(user=user)
+        background_tasks.add_task(
+            send_email,
+            to=user.notification_email or user.email,
             subject="Welcome to N.I.X",
-            body=email_template.render(user=user)
+            body=email_body,
         )
 
         return JSONResponse({
@@ -279,39 +279,92 @@ async def web2FAverification(req: Request, session: SessionDep):
 
 
 @userApi.get('/auth/2FA/toggle-setting')
-async def toggle2FA(session: SessionDep, user=Depends(check_access)):
+async def toggle2FA(session: SessionDep, code: str | None = Query(None), user=Depends(check_access)):
     user = get_user_by_id(str(user.uid), session)
     if user is None:
         return JSONResponse({"message": 'User Not found'}, status_code=404)
 
+    # Require valid 2FA code to disable
+    if user.is_2FA_enabled:
+        if not code or not verify2FAcode(user.uid, code, session):
+            return JSONResponse({"message": 'Invalid 2FA code'}, status_code=401)
+
     user.is_2FA_enabled = not user.is_2FA_enabled
     stats, msg = update_user(user, session)
+
+    await manager.send_to_user(user.uid, {
+        "type": "event",
+        "event": "2fa_toggled",
+        "data": {"is_enabled": user.is_2FA_enabled}
+    })
 
     return JSONResponse({'message': msg}, status_code=stats)
 
 
+
+@userApi.put("/preferences/notification-email")
+async def update_notification_email(req: Request, session: SessionDep, user=Depends(check_access)):
+    user = get_user_by_id(str(user.uid), session)
+    if user is None:
+        return JSONResponse({"message": "User not found"}, status_code=404)
+
+    data = await req.json()
+    email_val = data.get("notification_email", "").strip()
+
+    if email_val == "":
+        email_val = None
+    elif not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email_val):
+        return JSONResponse({"message": "Invalid email format"}, status_code=400)
+
+    user.notification_email = email_val
+    stats, msg = update_user(user, session)
+    if stats != 200:
+        return JSONResponse({"message": msg}, status_code=stats)
+
+    return JSONResponse({"message": "Notification email updated", "notification_email": email_val}, status_code=200)
+
+
 @userApi.delete('/account/manage/delete-account')
-async def delete_account(req: Request, session: SessionDep, user=Depends(check_access)):
+async def delete_account(req: Request, background_tasks: BackgroundTasks, session: SessionDep, user=Depends(check_access)):
     data = await req.json()
     twofa_code = data.get('twofa_code')
 
     if user is None:
         return JSONResponse({'message': 'Authentication Failure!'}, status_code=401)
 
-    if not verify2FAcode(user, twofa_code, session):
+    if not verify2FAcode(user.uid, twofa_code, session):
         return JSONResponse({'message': 'Invalid 2FA code'}, status_code=401)
 
-    user = get_user_by_id(user, session)
+    user = get_user_by_id(user.uid, session)
     if user is None:
         return JSONResponse({'message': 'User not found'}, status_code=404)
 
+    # Get devices before deletion for WS cleanup
+    devices = get_user_devices(user.uid, session) or []
+
+    # Tell each device to log out before deleting
+    for device in devices:
+        await manager.send_to_device(str(device.uid), {
+            "type": "command",
+            "action": "logout"
+        })
+
     stats, msg = delete_user(user.uid, session)
     if stats == 200:
-        email_template = templates.get_template("email/accountDeletion.html")
-        send_email(
-            to=user.email,
+        # Disconnect device WS connections
+        for device in devices:
+            await manager.disconnect_device(str(device.uid))
+            removed_msg = {"uid": str(device.uid)}
+            await manager.send_to_user(user.uid, {
+                "type": "event", "event": "device_removed", "data": removed_msg
+            })
+
+        email_body = templates.get_template("email/accountDeletion.html").render(user=user, loginFormUrl=req.url_for('home'))
+        background_tasks.add_task(
+            send_email,
+            to=user.notification_email or user.email,
             subject="N.I.X Account Deletion",
-            body=email_template.render(user=user, loginFormUrl=req.url_for('home'))
+            body=email_body,
         )
 
     return JSONResponse({'message': msg}, status_code=stats)

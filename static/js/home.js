@@ -17,7 +17,11 @@ document.addEventListener("DOMContentLoaded", () => {
 function setCookie(name, value, days = 30) {
     const expires = new Date();
     expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=None; Secure`;
+    let cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/`;
+    if (location.protocol === 'https:') {
+        cookie += '; SameSite=None; Secure';
+    }
+    document.cookie = cookie;
 }
 
 const loginErrorMsg = document.getElementById('login-error-msg');

@@ -15,6 +15,8 @@ class User(SQLModel, table=True):
     twoFA_secret: str|None = Field(max_length=32, nullable=True)
     is_2FA_enabled: bool = Field(default=True)
 
+    notification_email: str|None = Field(default=None, nullable=True)
+
 
 class Token(SQLModel, table=True):
     uid: UUID = Field(primary_key=True, unique=True)

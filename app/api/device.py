@@ -1,16 +1,23 @@
 from fastapi import Request, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel import select
+from datetime import datetime, timedelta
 
 from app.core.config import SECRET_KEY
 from app.core.auth import check_access, get_qrcode, verify2FAcode
+from app.core.jwt_utility import generate_token
 
-from app.models import SessionDep, delete_device, delete_device_registered_token, delete_token, get_device, get_user_access_token, register_device, get_user_devices
+from app.models import (
+    SessionDep, delete_device, delete_device_registered_token, delete_token,
+    get_device, get_user_access_token, register_device, register_token,
+    get_user_devices
+)
 from app.models.devices import Device
 from app.models.users import Token
 
 from . import deviceApi
 from .forms import deleteDeviceForm, deviceForm
+from .comms import manager
 
 from uuid import UUID, uuid4
 
@@ -29,26 +36,40 @@ async def show_device_qr(req: Request, session: SessionDep, user=Depends(check_a
     data = await req.json()
     device_type = data.get('device_type')
     if device_type == "smartphone":
-        user_access_token = get_user_access_token(user.uid, session)
-        if user_access_token is None:
-            return JSONResponse({
-                'success': False,
-                'message': 'Please login to the mobile app first.'
-            }, status_code=401)
+        token_data = get_user_access_token(user.uid, session)
+        if token_data is None:
+            access_token = generate_token({'sub': user.email, 'uid': user.uid})
+            access_token_uid = uuid4()
+            token = Token(uid=access_token_uid, owner=user.uid, access_token=access_token,
+                          created_at=datetime.now(), expires_at=datetime.now() + timedelta(days=30))
+            tkn_stats, tkn_msg = register_token(token, session)
+            if tkn_stats != 200:
+                return JSONResponse({'success': False, 'message': tkn_msg}, status_code=500)
+            user_access_token = access_token
+            token_uid = str(access_token_uid)
+        else:
+            user_access_token, token_uid = token_data
 
-        status_code, data = get_qrcode(qr_for='device',
-            device_uid=str(uuid4()), secret=SECRET_KEY,
-            user_access_token=user_access_token
+        status_code, qr_data = get_qrcode(qr_for='device',
+            device_uid=str(uuid4()),
+            user_access_token=user_access_token,
+            access_token_uid=token_uid,
+            owner_uid=user.uid,
         )
 
         return JSONResponse({
-            'qr_path': data,
+            'qr_path': qr_data,
         }, status_code=status_code)
 
 
 @deviceApi.post('/manage/add-device')
 async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(check_access)):
     device_uid = UUID(device_data.uid)
+
+    existing = get_device(str(device_uid), user.uid, session)
+    if existing is not None:
+        return JSONResponse({'msg': 'Device already registered'}, status_code=409)
+
     device = Device(
         uid=device_uid,
         name=device_data.name,
@@ -92,6 +113,20 @@ async def add_device(device_data: deviceForm, session: SessionDep, user=Depends(
     if stats != 200:
         return JSONResponse({'stats': stats, 'msg': msg}, status_code=stats)
 
+    device_added_msg = {
+        "uid": str(device.uid),
+        "name": device.name,
+        "type": device.type,
+        "ip": device.ip,
+        "is_active": device.is_active,
+    }
+    await manager.send_to_user(user.uid, {
+        "type": "event", "event": "device_added", "data": device_added_msg
+    })
+    await manager.send_to_user_device(user.uid, {
+        "type": "event", "event": "device_added", "data": device_added_msg
+    })
+
     return JSONResponse(
         {
             'stats': stats, 'msg': msg,
@@ -121,6 +156,17 @@ async def toggleStatus(uid: str, session: SessionDep, user=Depends(check_access)
     session.commit()
     session.refresh(device)
 
+    status_change_msg = {
+        "uid": str(device.uid),
+        "is_active": device.is_active,
+    }
+    await manager.send_to_user(user.uid, {
+        "type": "event", "event": "device_status_change", "data": status_change_msg
+    })
+    await manager.send_to_user_device(user.uid, {
+        "type": "event", "event": "device_status_change", "data": status_change_msg
+    })
+
     return JSONResponse({
         "msg": "Status updated!",
         "device_status": device.is_active
@@ -129,19 +175,32 @@ async def toggleStatus(uid: str, session: SessionDep, user=Depends(check_access)
 
 @deviceApi.post('/manage/logout')
 async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, user=Depends(check_access)):
-    if delete_info.access_token_uid and delete_info.device_uid is not None:
+    if not delete_info.access_token_uid or not delete_info.device_uid:
+        return JSONResponse({'msg': 'No logout data provided'}, status_code=500)
 
-        device = get_device(delete_info.device_uid, user.uid, session)
-        if device is None:
-            return JSONResponse({'msg': 'No device found'}, status_code=500)
+    device = get_device(delete_info.device_uid, user.uid, session)
+    if device is None:
+        return JSONResponse({'msg': 'No device found'}, status_code=500)
 
-        dd_stats, dd_msg = delete_device(delete_info.device_uid, user.uid, session)
-        if dd_stats == 200:
-            atd_stats, atd_msg = delete_device_registered_token(delete_info.access_token_uid, device, session)
+    # Tell the device to log out before removing it
+    await manager.send_to_device(delete_info.device_uid, {
+        "type": "command",
+        "action": "logout"
+    })
 
-            return JSONResponse({'msg': [dd_msg, atd_msg]}, status_code=atd_stats)
+    dd_stats, dd_msg = delete_device(delete_info.device_uid, user.uid, session)
+    if dd_stats != 200:
+        return JSONResponse({'msg': dd_msg}, status_code=dd_stats)
 
-    return JSONResponse({'msg': 'No logout data provided'}, status_code=500)
+    delete_device_registered_token(delete_info.access_token_uid, device, session)
+
+    removed_msg = {"uid": delete_info.device_uid}
+    await manager.send_to_user(user.uid, {
+        "type": "event", "event": "device_removed", "data": removed_msg
+    })
+    await manager.disconnect_device(delete_info.device_uid)
+
+    return JSONResponse({'msg': 'Device deregistered successfully'}, status_code=200)
 
 
 @deviceApi.delete('/manage/delete-all')
@@ -160,8 +219,17 @@ async def delete_all_devices(req: Request, session: SessionDep, user=Depends(che
         return JSONResponse({'message': 'Unable to fetch devices fot this action!'}, status_code=500)
 
     for device in devices:
+        # Tell the device to log out before removing it
+        await manager.send_to_device(str(device.uid), {
+            "type": "command",
+            "action": "logout"
+        })
         delete_device(str(device.uid), user.uid, session)
         delete_token(user.uid, session)
-
+        removed_msg = {"uid": str(device.uid)}
+        await manager.send_to_user(user.uid, {
+            "type": "event", "event": "device_removed", "data": removed_msg
+        })
+        await manager.disconnect_device(str(device.uid))
 
     return JSONResponse({'message': 'All devices deleted successfully'}, status_code=200)

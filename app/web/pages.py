@@ -13,7 +13,7 @@ from . import webApp, get_2FA_uri
 
 from typing import Union
 from logging import getLogger
-
+ 
 
 
 logger = getLogger(__name__)
@@ -123,6 +123,20 @@ async def dashboard(req: Request, uid: str, session: SessionDep, current_user_ui
         {
             "request": req,
             "devices": devices,
+            "user": user,
+        }
+    )
+
+
+# CMD Route
+@webApp.get("/comms", response_class=HTMLResponse)
+@login_required()
+async def connect(req: Request, session: SessionDep, current_user_uid: str|None=None):
+    user = get_user_by_id(str(current_user_uid), session)
+    return templates.TemplateResponse(
+        "connect.html",
+        {
+            "request": req,
             "user": user,
         }
     )

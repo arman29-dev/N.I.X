@@ -49,6 +49,13 @@ def check_access(req: Request, credentials: Optional[HTTPAuthorizationCredential
     return user
 
 
+def verify_ws_token(token: str) -> dict | None:
+    payload = verify_token(token)
+    if not payload:
+        return None
+    return payload
+
+
 def login_required(redirect_url: str = "/web/home"):
     def decorator(func):
         @wraps(func)
@@ -100,7 +107,7 @@ def generate_verification_code(user: User, session: SessionDep, expiry_minutes=5
 
 def get_qrcode(qr_for: str='2FA', data: str|None=None, **kwargs) -> tuple[Literal[200, 500], str]:
     if qr_for == 'device':
-        required_fields = ['device_uid', 'secret', 'user_access_token']
+        required_fields = ['device_uid', 'user_access_token', 'access_token_uid', 'owner_uid']
         for field in required_fields:
             if field not in kwargs or kwargs[field] is None:
                 return 500, f"Missing required field: {field}"

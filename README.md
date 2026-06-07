@@ -369,11 +369,7 @@ A `SensitiveDataFilter` automatically redacts:
 
 ## Known Issues
 
-- **Missing route**: `templates/dashboard.html` links to `url_for('messaging')` — no route named `messaging`, causes 500 when clicked
-- **Missing template**: `templates/connect.html` does not exist, but `/web/comms` route tries to render it
-- **Duplicate device UID**: `add-device` API returns 500 on retry when device UID already exists (unique constraint violation)
 - **No token refresh**: JWT expires after 30 days with no refresh mechanism
-- **2FA `delete-account`**: `delete_account()` endpoint passes the wrong type to `verify2FAcode` — passes `user` object instead of `user.uid`
 
 ---
 

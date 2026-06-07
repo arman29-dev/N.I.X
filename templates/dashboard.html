@@ -26,6 +26,7 @@
                             <path d="M12 22V12" stroke="#3df5f5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
                         </svg>
                         <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-[#3df5f5]">N.I.X</h2>
+                        <div id="ws-status" class="size-2 rounded-full bg-red-500" title="WS Disconnected"></div>
                     </div>
                     <div class="group relative">
                         <button class="relative flex size-10 items-center justify-center rounded-full border-2 border-transparent transition-all duration-300 hover:border-[#05cdff]">
@@ -34,7 +35,7 @@
                                 <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
                             </svg>
                         </button>
-                        <div class="tooltip absolute right-0 top-full mt-2 w-48 rounded-md bg-[#182C2C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 transition-opacity duration-300 ease-in-out">
+                        <div class="tooltip invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute right-0 top-full mt-2 w-48 rounded-md bg-[#182C2C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 transition-opacity duration-300 ease-in-out">
                             <a class="block px-4 py-2 text-sm text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('account_center', uid=user.uid) }}">Account</a>
                             <a class="block px-4 py-2 text-sm text-red-400 transition-all duration-200 hover:scale-105 hover:bg-gray-700/50 rounded-md" href="{{ url_for('logout') }}">Logout</a>
                         </div>
@@ -46,16 +47,22 @@
                             <h1 class="text-3xl font-bold leading-tight tracking-tight">
                                 Connected Devices
                             </h1>
-                            <button class="btn-add-device flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-5 bg-[#3df5f5] text-[#102323] text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-opacity-80 transition-all duration-200" id="add-device-btn">
-                                <span class="material-symbols-outlined"> add </span>
-                                <span class="truncate">Add New Device</span>
-                            </button>
+                            <div class="flex gap-3">
+                                <a href="{{ url_for('connect') }}" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-5 bg-[#05cdff] text-[#102323] text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-opacity-80 transition-all duration-200">
+                                    <span class="material-symbols-outlined">terminal</span>
+                                    <span class="truncate">CMD Line</span>
+                                </a>
+                                <button class="btn-add-device flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-md h-10 px-5 bg-[#3df5f5] text-[#102323] text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-opacity-80 transition-all duration-200" id="add-device-btn">
+                                    <span class="material-symbols-outlined">add</span>
+                                    <span class="truncate">Add New Device</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {% if devices %}
                             {% for device in devices %}
-                            <div class="flex flex-col rounded-lg bg-[#182C2C] p-6 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/20">
-                                <div class="group relative flex items-center justify-between">
+                             <div data-device-uid="{{ device.uid }}" data-device-active="{{ "true" if device.is_active else "false" }}" data-device-name="{{ device.name }}" class="flex flex-col rounded-lg bg-[#182C2C] p-6 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/20">
+                                <div class="relative flex items-center justify-between">
                                     <div class="flex items-center gap-3">
                                         <span class="material-symbols-outlined text-[#3df5f5]">
                                             {% if device.type == "embedded" %}
@@ -64,29 +71,24 @@
                                             {{ device.type }}
                                             {% endif %}
                                         </span>
-                                        <p class="text-lg font-bold">{{ device.name }}</p>
+                                        <p class="text-lg font-bold device-name">{{ device.name }}</p>
                                     </div>
-                                    <button class="text-gray-400 hover:text-white focus:outline-none rounded-full p-1">
+                                    <button class="device-menu-btn text-gray-400 hover:text-white focus:outline-none rounded-full p-1">
                                         <span class="material-symbols-outlined"> more_vert </span>
                                     </button>
-                                    <div class="device-menu origin-top-right absolute right-0 top-full mt-2 w-40 rounded-md bg-[#2A3C3C] p-2 shadow-lg ring-1 ring-black ring-opacity-5">
-                                        <a class="menu-item block px-4 py-2 text-sm text-green-300 hover:bg-green-800/20 rounded-md" href="#">Refresh</a>
-                                        <a class="menu-item block px-4 py-2 text-sm text-yellow-300 hover:bg-yellow-800/20 rounded-md" href="#">Unlink</a>
-                                        <a class="menu-item block px-4 py-2 text-sm text-red-400 hover:bg-red-800/20 rounded-md" href="#">Delete</a>
+                                    <div class="device-menu hidden origin-top-right absolute right-0 top-full mt-2 w-40 rounded-md bg-[#2A3C3C] p-2 shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                                        <button class="menu-item block w-full text-left px-4 py-2 text-sm text-green-300 hover:bg-green-800/20 rounded-md" data-action="rename">Rename</button>
+                                        <button class="menu-item block w-full text-left px-4 py-2 text-sm text-yellow-300 hover:bg-yellow-800/20 rounded-md" data-action="refresh">Refresh</button>
+                                        <button class="menu-item block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-800/20 rounded-md" data-action="delete">Delete</button>
                                     </div>
                                 </div>
                                 <div class="mt-3 flex-1">
                                     <p class="text-sm text-gray-400">{{ device.type }}</p>
                                     <div class="flex items-center justify-between">
                                         <p class="text-sm text-gray-400">IP : {{ device.ip }}</p>
-                                        <div class="flex items-center gap-2">
-                                            {% if device.is_active %}
-                                            <div class="size-2.5 rounded-full bg-green-500"></div>
-                                            <p class="text-sm font-medium text-green-400">Online</p>
-                                            {% else %}
+                                        <div class="flex items-center gap-2 device-status">
                                             <div class="size-2.5 rounded-full bg-red-500"></div>
                                             <p class="text-sm font-medium text-red-400">Offline</p>
-                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -165,6 +167,10 @@
     <script>
       const API = {
         "route": "{{ url_for('show_device_qr') }}"
+      };
+      const USER = {
+        "uid": "{{ user.uid }}",
+        "ws_url": "{{ url_for('events_ws', user_id=user.uid) }}"
       };
     </script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}" ></script>

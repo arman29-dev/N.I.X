@@ -28,6 +28,7 @@ LOG_DIR = ROOT_DIR / "logs"
 SENDER = str(getenv('EMAIL_HOST'))
 SECRET_KEY = str(getenv('SECRET_KEY'))
 SENDER_PASSWORD = str(getenv('EMAIL_HOST_PASSWORD'))
+ADMIN_EMAIL = str(getenv('ADMIN_EMAIL'))
 
 JWT_HASH_ALGORITHM = "HS256"
 

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from .users import User, Token
 from .devices import Device
+from .command_request import CommandRequest
 
 
 logger = getLogger(__name__)
@@ -63,9 +64,9 @@ def delete_user(uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], 
 
 def get_user(email: str, session: SessionDep) -> User|None:
     try:
-        user = session.get(User, {"email": email})
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
         return user
-
     except Exception as E:
         logger.error(f"Database error while fetching user {email}: {E}", exc_info=True)
         raise
@@ -82,12 +83,12 @@ def get_user_by_id(uid: str, session: SessionDep) -> User|None:
         raise
 
 
-def get_user_access_token(uid: str, session: SessionDep) -> str|None:
+def get_user_access_token(uid: str, session: SessionDep) -> tuple[str, str]|None:
     try:
         statement = select(Token).where(Token.owner == uid)
         token = session.exec(statement).first()
         if token:
-            return token.access_token
+            return token.access_token, str(token.uid)
         return None
 
     except Exception as E:
@@ -129,6 +130,19 @@ def get_user_devices(owner_uid: str, session: SessionDep) -> list[Device]|None:
     except Exception as E:
         logger.error(f"Database error while fetching devices for owner {owner_uid}: {E}", exc_info=True)
         raise
+
+
+def update_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500], str]:
+    try:
+        session.add(device)
+        session.commit()
+        session.refresh(device)
+        return 200, "Device successfully updated"
+
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error while updating device {device.uid}: {E}", exc_info=True)
+        return 500, str(E)
 
 
 def register_device(device: Device, session: SessionDep) -> tuple[Literal[200, 500], str]:
