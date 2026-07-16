@@ -122,6 +122,16 @@ class WSConnectionManager:
                 except Exception:
                     await self.disconnect_device(device_id)
 
+    async def send_to_user_device_except(self, user_id: str, exclude_device_id: str, message: dict):
+        for device_id, ws in self.device_connections.items():
+            if device_id == exclude_device_id:
+                continue
+            if self.device_to_user.get(device_id) == user_id:
+                try:
+                    await ws.send_json(jsonable_encoder(message))
+                except Exception:
+                    await self.disconnect_device(device_id)
+
     def get_user_for_device(self, device_id: str) -> str | None:
         return self.device_to_user.get(device_id)
 

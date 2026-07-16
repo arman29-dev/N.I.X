@@ -1,14 +1,14 @@
 from sqlmodel import SQLModel
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, RedirectResponse
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from slowapi.errors import RateLimitExceeded
 
-from .core.config import static_dir, limiter, rate_limit_handler, SECRET_KEY, templates
+from .core.config import static_dir, limiter, rate_limit_handler, SECRET_KEY, templates, UPLOAD_DIR
 from .core.middleware import RequestLoggingMiddleware
 from .core.sLogger import logger
 from .models import engine
@@ -19,6 +19,7 @@ from .api.user import userApi
 from .api.comms import commsWS
 from .api.logs import logApi
 from .api.cmd_requests import cmdRequestApi
+from .api.file import fileApi
 
 from contextlib import asynccontextmanager
 
@@ -26,6 +27,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     logger.info("Starting up N.I.X")
     yield
     # Shutdown
@@ -99,4 +101,5 @@ app.include_router(userApi)
 app.include_router(commsWS)
 app.include_router(logApi)
 app.include_router(cmdRequestApi)
+app.include_router(fileApi)
 app.include_router(webApp)

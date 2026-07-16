@@ -24,6 +24,7 @@ template_dir = ROOT_DIR / "templates"
 templates = Jinja2Templates(directory=template_dir)
 
 LOG_DIR = ROOT_DIR / "logs"
+UPLOAD_DIR = ROOT_DIR / "uploads"
 
 SENDER = str(getenv('EMAIL_HOST'))
 SECRET_KEY = str(getenv('SECRET_KEY'))

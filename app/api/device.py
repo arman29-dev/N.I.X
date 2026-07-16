@@ -1,10 +1,11 @@
 from fastapi import Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlmodel import select
 from datetime import datetime, timedelta
 
 from app.core.config import SECRET_KEY
 from app.core.auth import check_access, get_qrcode, verify2FAcode
+from app.core.crypto import encrypt_config
 from app.core.jwt_utility import generate_token
 
 from app.models import (
@@ -35,31 +36,45 @@ async def show_device_qr(req: Request, session: SessionDep, user=Depends(check_a
 
     data = await req.json()
     device_type = data.get('device_type')
+
+    # Shared: get or create access token
+    token_data = get_user_access_token(user.uid, session)
+    if token_data is None:
+        access_token = generate_token({'sub': user.email, 'uid': user.uid})
+        access_token_uid = uuid4()
+        token = Token(uid=access_token_uid, owner=user.uid, access_token=access_token,
+                      created_at=datetime.now(), expires_at=datetime.now() + timedelta(days=30))
+        tkn_stats, tkn_msg = register_token(token, session)
+        if tkn_stats != 200:
+            return JSONResponse({'success': False, 'message': tkn_msg}, status_code=500)
+        user_access_token = access_token
+        token_uid = str(access_token_uid)
+    else:
+        user_access_token, token_uid = token_data
+
+    device_uid = str(uuid4())
+    payload = {
+        'device_uid': device_uid,
+        'user_access_token': user_access_token,
+        'access_token_uid': token_uid,
+        'owner_uid': user.uid,
+    }
+
     if device_type == "smartphone":
-        token_data = get_user_access_token(user.uid, session)
-        if token_data is None:
-            access_token = generate_token({'sub': user.email, 'uid': user.uid})
-            access_token_uid = uuid4()
-            token = Token(uid=access_token_uid, owner=user.uid, access_token=access_token,
-                          created_at=datetime.now(), expires_at=datetime.now() + timedelta(days=30))
-            tkn_stats, tkn_msg = register_token(token, session)
-            if tkn_stats != 200:
-                return JSONResponse({'success': False, 'message': tkn_msg}, status_code=500)
-            user_access_token = access_token
-            token_uid = str(access_token_uid)
-        else:
-            user_access_token, token_uid = token_data
-
-        status_code, qr_data = get_qrcode(qr_for='device',
-            device_uid=str(uuid4()),
-            user_access_token=user_access_token,
-            access_token_uid=token_uid,
-            owner_uid=user.uid,
-        )
-
+        status_code, qr_data = get_qrcode(qr_for='device', **payload)
         return JSONResponse({
             'qr_path': qr_data,
         }, status_code=status_code)
+
+    elif device_type == "laptop":
+        encrypted = encrypt_config(payload, SECRET_KEY)
+        return Response(
+            content=encrypted,
+            media_type='application/json',
+            headers={
+                'Content-Disposition': f'attachment; filename="nix-config-{device_uid[:8]}.nixconfig"',
+            },
+        )
 
 
 @deviceApi.post('/manage/add-device')
@@ -192,7 +207,7 @@ async def deregister_device(delete_info: deleteDeviceForm, session: SessionDep, 
     if dd_stats != 200:
         return JSONResponse({'msg': dd_msg}, status_code=dd_stats)
 
-    delete_device_registered_token(delete_info.access_token_uid, device, session)
+    delete_device_registered_token(delete_info.access_token_uid, session)
 
     removed_msg = {"uid": delete_info.device_uid}
     await manager.send_to_user(user.uid, {

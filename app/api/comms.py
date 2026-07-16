@@ -3,13 +3,14 @@ from sqlmodel import select
 
 from . import commsWS, WSConnectionManager
 from app.core.auth import verify_ws_token, verify2FAcode
-from app.models import SessionDep, get_session, get_user_by_id, get_user_devices
+from app.models import get_session, get_user_by_id, get_user_devices
 from app.models import update_device, delete_device as delete_device_db
 from app.models import get_device as get_device_db
 from app.models.devices import Device
 from app.core.sLogger import security_logger
 
 from uuid import UUID
+from datetime import datetime, timezone
 from logging import getLogger
 
 
@@ -49,7 +50,7 @@ async def comms(ws: WebSocket, user_id: str, device_id: str, token: str = Query(
                 "data": {"from_device": device_id, "message": data}
             })
     except WebSocketDisconnect:
-        manager.disconnect_device(device_id)
+        await manager.disconnect_device(device_id)
 
 
 # ── Dashboard Events WS (browser) ──
@@ -158,7 +159,7 @@ async def events_ws(ws: WebSocket, user_id: str, token: str = Query(...)):
                     continue
                 if manager.is_device_connected(device_uid):
                     await manager.send_to_device(device_uid, {"type": "command", "action": "logout"})
-                    manager.disconnect_device(device_uid)
+                    await manager.disconnect_device(device_uid)
                 session = next(get_session())
                 try:
                     stats, msg = delete_device_db(device_uid, user_id, session)
@@ -172,6 +173,51 @@ async def events_ws(ws: WebSocket, user_id: str, token: str = Query(...)):
                         })
                     else:
                         await ws.send_json({"type": "error", "msg": msg})
+                finally:
+                    session.close()
+
+            elif action == 'send_direct_message':
+                target_device = data.get('target_device')
+                message = data.get('message', '')
+                if not target_device:
+                    await ws.send_json({"type": "error", "msg": "Missing target_device"})
+                    continue
+                if not message:
+                    await ws.send_json({"type": "error", "msg": "Missing message"})
+                    continue
+                msg_payload = {"from_device": "web_dashboard", "message": message}
+                if manager.is_device_connected(target_device):
+                    await manager.send_to_device(target_device, {
+                        "type": "event", "event": "device_message", "data": msg_payload
+                    })
+                    await ws.send_json({
+                        "type": "event", "event": "device_message",
+                        "data": {"from_device": "web_dashboard", "message": message, "target_device": target_device}
+                    })
+                else:
+                    await ws.send_json({"type": "error", "msg": "Target device not connected"})
+
+            elif action == 'get_devices':
+                session = next(get_session())
+                try:
+                    from app.models import get_user_devices
+                    all_devices = get_user_devices(user_id, session)
+                    connected_ids = manager.get_user_connected_devices(user_id)
+                    devices_data = []
+                    for d in all_devices:
+                        devices_data.append({
+                            "uid": str(d.uid),
+                            "name": d.name,
+                            "type": d.type,
+                            "ip": d.ip,
+                            "is_active": d.is_active,
+                            "is_online": str(d.uid) in connected_ids,
+                        })
+                    await ws.send_json({
+                        "type": "event",
+                        "event": "device_list",
+                        "data": {"devices": devices_data}
+                    })
                 finally:
                     session.close()
 
@@ -325,6 +371,19 @@ async def device_ws(ws: WebSocket, user_id: str, device_id: str, token: str = Qu
                         await manager.send_to_user_device(user_id, {
                             "type": "event", "event": "cmd_output", "data": output_payload
                         })
+
+            elif action == 'clipboard_sync':
+                text = data.get('data', {}).get('text', '')
+                if text:
+                    await manager.send_to_user_device_except(user_id, device_id, {
+                        "type": "event",
+                        "event": "clipboard_sync",
+                        "data": {
+                            "text": text,
+                            "source_device": device_id,
+                            "timestamp": str(datetime.now(timezone.utc)),
+                        },
+                    })
 
             elif action == 'get_devices':
                 session = next(get_session())

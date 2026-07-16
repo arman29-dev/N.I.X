@@ -30,7 +30,7 @@ Python `>=3.13,<3.14`. Server listens on `http://0.0.0.0:8000`.
 | `app/web/pages.py` | Web page route handlers (Jinja2 templates) |
 | `app/api/user.py` | Auth endpoints (login, register, 2FA, password reset) + preferences (notification_email) |
 | `app/api/device.py` | Device management (add, toggle, QR gen, delete) |
-| `app/api/comms.py` | Three WS endpoints: `/ws/comms/{uid}/{did}`, `/ws/events/{uid}`, `/ws/device/{uid}/{did}` |
+| `app/api/comms.py` | Three WS endpoints: `/ws/comms/{uid}/{did}`, `/ws/events/{uid}` (supports `send_direct_message`, `get_devices`), `/ws/device/{uid}/{did}` |
 | `app/api/cmd_requests.py` | CMD/terminal request handlers |
 | `app/core/auth.py` | JWT validation, `login_required` decorator, 2FA verify, QR gen, `verify_ws_token()` |
 | `app/core/config.py` | Env loading, paths, limiter, Jinja2 templates |
@@ -55,11 +55,10 @@ User model fields: `uid`, `email`, `username`, `password`, `verification_code`, 
 
 - `WSConnectionManager` routes by `user_id` — three dicts: `user_connections`, `device_connections`, `device_to_user`
 - All WS endpoints require JWT `?token=` query param on connect
-- `/ws/events/{uid}` — receives typed JSON commands, broadcasts events (`device_status_change`, `2fa_toggled`, etc.)
-- `/ws/device/{uid}/{did}` — receives `toggle_status`, `refresh` commands, broadcasts status changes
+- `/ws/events/{uid}` — receives typed JSON commands (`toggle_2fa`, `rename_device`, `refresh_devices`, `delete_device`, `send_direct_message`, `get_devices`), broadcasts events (`device_status_change`, `2fa_toggled`, `device_message`, `device_list`, etc.)
+- `/ws/device/{uid}/{did}` — receives `toggle_status`, `refresh`, `send_message`, `terminal_exec`, `clipboard_sync`, `get_devices`, `rename_device` commands, broadcasts status changes
 - `/ws/comms/{uid}/{did}` — legacy device-to-device messaging
 
 ## Known issues
 
 - No token refresh mechanism — 30-day JWT expiry
-- User model doc in old code still mentions `language` field (removed)

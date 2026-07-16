@@ -407,13 +407,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ device_type: selectedDevice.value }),
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                alert('Error: ' + (errData.message || errData.error || 'Failed to add device'));
+                return;
+            }
 
-            if (response.ok) {
-                closeModal();
-                openQrModal(data.qr_path);
+            closeModal();
+
+            if (selectedDevice.value === 'laptop') {
+                // Desktop: download encrypted config file
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^"]+)"?/);
+                const filename = match ? match[1] : 'nix-config.nixconfig';
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
             } else {
-                alert('Error: ' + (data.message || data.error || 'Failed to add device'));
+                // Mobile/Embedded: show QR code
+                const data = await response.json();
+                openQrModal(data.qr_path);
             }
         } catch (error) {
             alert('Error: ' + error.message);

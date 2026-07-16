@@ -4,10 +4,12 @@ from sqlmodel import Session, select, create_engine
 from typing import Annotated, Literal
 from logging import getLogger
 from uuid import UUID
+from datetime import datetime
 
 from .users import User, Token
 from .devices import Device
 from .command_request import CommandRequest
+from .file import FileUpload
 
 
 logger = getLogger(__name__)
@@ -205,13 +207,49 @@ def delete_token(user_id: str, session: SessionDep) -> tuple[Literal[200, 404, 5
         logger.error(f"Database error while deleting token: {E}", exc_info=True)
         return 500, str(E)
 
-def delete_device_registered_token(token_uid: str, device_data: Device, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+def register_file_upload(file: FileUpload, session: SessionDep) -> tuple[Literal[200, 500], str]:
     try:
-        statement = select(Token).where(
-            Token.uid == UUID(token_uid),
-            Token.owner == device_data.owner,
-            Token.linked_device == str(device_data.uid)
+        session.add(file)
+        session.commit()
+        session.refresh(file)
+        return 200, "File registered"
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error registering file upload: {E}", exc_info=True)
+        return 500, str(E)
+
+
+def get_file_upload(file_id: str, owner_uid: str, session: SessionDep) -> FileUpload | None:
+    try:
+        statement = select(FileUpload).where(
+            FileUpload.id == file_id,
+            FileUpload.owner_uid == owner_uid
         )
+        return session.exec(statement).first()
+    except Exception as E:
+        logger.error(f"Database error fetching file {file_id}: {E}", exc_info=True)
+        raise
+
+
+def delete_expired_files(session: SessionDep) -> int:
+    try:
+        now = datetime.now()
+        statement = select(FileUpload).where(FileUpload.expires_at <= now)
+        expired = session.exec(statement).all()
+        count = len(expired)
+        for f in expired:
+            session.delete(f)
+        session.commit()
+        return count
+    except Exception as E:
+        session.rollback()
+        logger.error(f"Database error deleting expired files: {E}", exc_info=True)
+        return 0
+
+
+def delete_device_registered_token(token_uid: str, session: SessionDep) -> tuple[Literal[200, 404, 500], str]:
+    try:
+        statement = select(Token).where(Token.uid == UUID(token_uid))
         token = session.exec(statement).first()
 
         if not token:
@@ -219,9 +257,9 @@ def delete_device_registered_token(token_uid: str, device_data: Device, session:
 
         session.delete(token)
         session.commit()
-        return 200, "Device successfully deleted"
+        return 200, "Token successfully deleted"
 
     except Exception as E:
         session.rollback()
-        logger.error(f"Database error while deleting device {device_data.uid}: {E}", exc_info=True)
+        logger.error(f"Database error while deleting token {token_uid}: {E}", exc_info=True)
         return 500, str(E)

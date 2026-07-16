@@ -34,8 +34,21 @@ function showNotification(message, isError) {
 
 let _hasInteracted = false;
 
+const COMMANDS = [
+  { cmd: 'help',    desc: 'Show available commands' },
+  { cmd: 'clear',   desc: 'Clear terminal' },
+  { cmd: 'status',  desc: 'Show connection status' },
+  { cmd: 'devices', desc: 'List connected devices' },
+  { cmd: 'echo',    desc: 'Echo text' },
+  { cmd: 'ws',      desc: 'Send message to a device' },
+];
+
+let cachedDevices = [];
+let _wsCommandStage = 'idle'; // 'idle' | 'device_selected'
+
 const output = document.getElementById('terminal-output');
 const input = document.getElementById('cmd-input');
+const suggestionsEl = document.getElementById('cmd-suggestions');
 
 function printLine(text, className) {
     const line = document.createElement('div');
@@ -87,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onopen = () => {
             setWSStatus(true);
             printSuccess('Connected to N.I.X');
+            ws.send(JSON.stringify({action: 'get_devices'}));
         };
 
         ws.onmessage = (event) => {
@@ -108,7 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             printInfo(`2FA ${data.is_enabled ? 'enabled' : 'disabled'}`);
                             break;
                         case 'device_message':
-                            printOutput(`[${data.from}] ${data.message}`);
+                            const from = data.from_device || 'device';
+                            const target = data.target_device;
+                            if (target) {
+                                printOutput(`[→ ${target}] ${data.message}`);
+                            } else {
+                                printOutput(`[${from}] ${data.message}`);
+                            }
+                            break;
+                        case 'device_list':
+                            cachedDevices = (data.devices || []).filter(d => d.is_online);
+                            printInfo(`Loaded ${cachedDevices.length} online device(s)`);
                             break;
                         case 'device_connectivity_snapshot':
                             break;
@@ -146,12 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         switch (command) {
             case 'help':
                 printInfo('Available commands:');
-                printOutput('  /help             - Show this message');
-                printOutput('  /clear            - Clear terminal');
-                printOutput('  /status           - Show connection status');
-                printOutput('  /devices          - List connected devices');
-                printOutput('  /echo <text>      - Echo text');
-                printOutput('  /ws <message>     - Send raw WS message');
+                printOutput('  /help                   - Show this message');
+                printOutput('  /clear                  - Clear terminal');
+                printOutput('  /status                 - Show connection status');
+                printOutput('  /devices                - List connected devices');
+                printOutput('  /echo <text>            - Echo text');
+                printOutput('  /ws <device> <message>  - Send message to a device');
                 break;
 
             case 'clear':
@@ -163,8 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case 'devices':
-                printInfo('Device listing not implemented in CMD interface.');
-                printOutput('Use the Dashboard to manage devices.');
+                if (cachedDevices.length === 0) {
+                    printInfo('No online devices. Use /ws to send messages.');
+                } else {
+                    printInfo('Online devices:');
+                    cachedDevices.forEach(d => {
+                        printOutput(`  ${d.name || 'Unknown'} (${d.uid}) — ${d.type}`);
+                    });
+                }
                 break;
 
             case 'echo':
@@ -172,19 +202,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case 'ws':
-                const payload = parts.slice(1).join(' ');
-                if (payload && ws && ws.readyState === WebSocket.OPEN) {
-                    try {
-                        const obj = JSON.parse(payload);
-                        ws.send(JSON.stringify(obj));
-                        printSuccess('Sent: ' + payload);
-                    } catch {
-                        printError('Invalid JSON. Use valid JSON format.');
+                if (_wsCommandStage === 'device_selected') {
+                    _wsCommandStage = 'idle';
+                    const message = parts.slice(1).join(' ');
+                    if (!message) {
+                        printError('Usage: /ws <device> <message>');
+                        break;
                     }
-                } else if (!payload) {
-                    printError('Usage: /ws <json>');
+                    const targetUid = command;
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({action: 'send_direct_message', target_device: targetUid, message}));
+                        const device = cachedDevices.find(d => d.uid === targetUid);
+                        const name = device ? device.name : targetUid;
+                        printSuccess(`[→ ${name}] ${message}`);
+                    } else {
+                        printError('Not connected.');
+                    }
                 } else {
-                    printError('Not connected.');
+                    if (cachedDevices.length === 0) {
+                        printError('No online devices found. Wait for devices to connect.');
+                        break;
+                    }
+                    const deviceQuery = parts.slice(1).join(' ').toLowerCase();
+                    const matched = cachedDevices.filter(d => {
+                        const name = (d.name || '').toLowerCase();
+                        const uid = (d.uid || '').toLowerCase();
+                        return !deviceQuery || name.includes(deviceQuery) || uid.includes(deviceQuery);
+                    });
+                    if (matched.length === 1 && deviceQuery) {
+                        _wsCommandStage = 'device_selected';
+                        input.value = `/ws ${matched[0].uid} `;
+                        printInfo(`Target: ${matched[0].name || matched[0].uid} — type your message and press Enter`);
+                    } else {
+                        printInfo('Select a device:');
+                        matched.forEach(d => {
+                            printOutput(`  ${d.name || 'Unknown'} (${d.uid})`);
+                        });
+                        printInfo('Type /ws <device_name> to select, then your message.');
+                    }
                 }
                 break;
 
@@ -193,37 +248,149 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const cmd = input.value;
-            input.value = '';
-            if (cmd.trim()) {
-                if (!_hasInteracted) {
-                    output.innerHTML = '';
-                    _hasInteracted = true;
-                }
-                printOutput(`$ ${cmd}`);
-                processCommand(cmd);
-                const cleaned = cmd.trim().toLowerCase();
-                if (cleaned !== '/clear') {
-                    const sep = document.createElement('div');
-                    sep.className = 'h-px bg-[#2A3C3C] my-4';
-                    output.appendChild(sep);
-                    output.scrollTop = output.scrollHeight;
-                }
+    function submitCommand() {
+        const cmd = input.value;
+        input.value = '';
+        if (cmd.trim()) {
+            if (!_hasInteracted) {
+                output.innerHTML = '';
+                _hasInteracted = true;
+            }
+            printOutput(`$ ${cmd}`);
+            processCommand(cmd);
+            const cleaned = cmd.trim().toLowerCase();
+            if (cleaned !== '/clear') {
+                const sep = document.createElement('div');
+                sep.className = 'h-px bg-[#2A3C3C] my-4';
+                output.appendChild(sep);
+                output.scrollTop = output.scrollHeight;
             }
         }
-    });
+        if (!cmd.trim().startsWith('/ws')) {
+            _wsCommandStage = 'idle';
+        }
+    }
 
-    // Live prefix warning on keystroke
+    // ── Command Suggestions ──
     const prefixWarning = document.getElementById('cmd-prefix-warning');
+    let _selectedSuggestionIndex = -1;
+
+    function renderSuggestions(filter) {
+        const filtered = filter
+            ? COMMANDS.filter(c => c.cmd.startsWith(filter.toLowerCase()))
+            : COMMANDS;
+        if (filtered.length === 0) {
+            suggestionsEl.classList.add('hidden');
+            suggestionsEl.innerHTML = '';
+            _selectedSuggestionIndex = -1;
+            return;
+        }
+        suggestionsEl.innerHTML = '';
+        suggestionsEl.classList.remove('hidden');
+        filtered.forEach((c, i) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 px-3 py-2 cursor-pointer text-sm font-mono border-b border-[#2A3C3C] last:border-b-0 hover:bg-[#182C2C] transition-colors';
+            row.dataset.index = i;
+            const cmdSpan = document.createElement('span');
+            cmdSpan.className = 'text-[#3df5f5] font-medium';
+            cmdSpan.textContent = '/' + c.cmd;
+            const descSpan = document.createElement('span');
+            descSpan.className = 'text-gray-400 text-xs';
+            descSpan.textContent = c.desc;
+            row.appendChild(cmdSpan);
+            row.appendChild(descSpan);
+            row.addEventListener('click', () => {
+                insertCommand(c.cmd);
+            });
+            row.addEventListener('mouseenter', () => {
+                if (_selectedSuggestionIndex >= 0 && _selectedSuggestionIndex < filtered.length) {
+                    suggestionsEl.children[_selectedSuggestionIndex]?.classList.remove('bg-[#182C2C]');
+                }
+                _selectedSuggestionIndex = i;
+                row.classList.add('bg-[#182C2C]');
+            });
+            suggestionsEl.appendChild(row);
+        });
+        _selectedSuggestionIndex = 0;
+        suggestionsEl.children[0]?.classList.add('bg-[#182C2C]');
+    }
+
+    function insertCommand(cmd) {
+        input.value = '/' + cmd;
+        suggestionsEl.classList.add('hidden');
+        suggestionsEl.innerHTML = '';
+        _selectedSuggestionIndex = -1;
+        input.focus();
+    }
+
+    function dismissSuggestions() {
+        suggestionsEl.classList.add('hidden');
+        suggestionsEl.innerHTML = '';
+        _selectedSuggestionIndex = -1;
+    }
+
     input.addEventListener('input', () => {
         const val = input.value;
+        // prefix warning
         if (val.length > 0 && !val.startsWith('/')) {
             prefixWarning.classList.remove('hidden');
         } else {
             prefixWarning.classList.add('hidden');
         }
+        // suggestions
+        if (val.startsWith('/')) {
+            const partial = val.slice(1);
+            renderSuggestions(partial);
+        } else {
+            dismissSuggestions();
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const showingSuggestions = !suggestionsEl.classList.contains('hidden') && suggestionsEl.children.length > 0;
+
+        if (e.key === 'Escape') {
+            if (showingSuggestions) dismissSuggestions();
+            return;
+        }
+
+        if (showingSuggestions) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const items = suggestionsEl.children;
+                items[_selectedSuggestionIndex]?.classList.remove('bg-[#182C2C]');
+                _selectedSuggestionIndex = Math.min(_selectedSuggestionIndex + 1, items.length - 1);
+                items[_selectedSuggestionIndex]?.classList.add('bg-[#182C2C]');
+                items[_selectedSuggestionIndex]?.scrollIntoView({ block: 'nearest' });
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const items = suggestionsEl.children;
+                items[_selectedSuggestionIndex]?.classList.remove('bg-[#182C2C]');
+                _selectedSuggestionIndex = Math.max(_selectedSuggestionIndex - 1, 0);
+                items[_selectedSuggestionIndex]?.classList.add('bg-[#182C2C]');
+                items[_selectedSuggestionIndex]?.scrollIntoView({ block: 'nearest' });
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                const items = suggestionsEl.children;
+                if (_selectedSuggestionIndex >= 0 && _selectedSuggestionIndex < items.length) {
+                    const cmd = COMMANDS.filter(c => c.cmd.startsWith(input.value.slice(1).toLowerCase()))[_selectedSuggestionIndex]?.cmd;
+                    if (cmd) insertCommand(cmd);
+                }
+                return;
+            }
+        }
+
+        if (e.key === 'Enter') {
+            submitCommand();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(dismissSuggestions, 200);
     });
 
     // ── New Command Request Modal ──
